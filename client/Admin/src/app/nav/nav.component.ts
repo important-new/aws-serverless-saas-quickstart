@@ -1,0 +1,71 @@
+import { Component, OnInit } from '@angular/core';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { from, Observable, of } from 'rxjs';
+import { filter, map, shareReplay } from 'rxjs/operators';
+import {
+  NavigationCancel,
+  NavigationEnd,
+  NavigationError,
+  NavigationStart,
+  Router,
+} from '@angular/router';
+
+import { AuthenticatorService } from '@aws-amplify/ui-angular';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { navItems } from '../_nav';
+
+@Component({
+  selector: 'app-nav',
+  templateUrl: './nav.component.html',
+  styleUrls: ['./nav.component.css'],
+})
+export class NavComponent implements OnInit {
+  tenantName = '';
+  loading$: Observable<boolean> = of(false);
+  isAuthenticated$: Observable<Boolean> | undefined;
+  username$: Observable<string> | undefined;
+  companyName$: Observable<string> | undefined;
+  public navItems = navItems;
+  isHandset$: Observable<boolean> = this.breakpointObserver
+    .observe(Breakpoints.Handset)
+    .pipe(
+      map((result) => result.matches),
+      shareReplay()
+    );
+
+  constructor(
+    private breakpointObserver: BreakpointObserver,
+    private router: Router
+  ) {
+    this.loading$ = this.router.events.pipe(
+      filter(
+        (e) =>
+          e instanceof NavigationStart ||
+          e instanceof NavigationEnd ||
+          e instanceof NavigationCancel ||
+          e instanceof NavigationError
+      ),
+      map((e) => e instanceof NavigationStart)
+    );
+  }
+
+  ngOnInit(): void {
+    try {
+      const s = fetchAuthSession().catch((err: any) => err);
+      const session$ = from(s);
+      this.isAuthenticated$ = session$.pipe(
+        filter((sesh) => !!sesh),
+        map((sesh) => sesh && sesh.tokens && !!sesh.tokens.idToken)
+      );
+      const token$ = session$.pipe(map((sesh) => sesh && sesh.tokens?.idToken));
+      this.username$ = token$.pipe(
+        map((t) => t && (t as any).payload?.['cognito:username'])
+      );
+      this.companyName$ = token$.pipe(
+        map((t) => t && (t as any).payload?.['custom:company-name'])
+      );
+    } catch (err) {
+      console.error('Unable to get current session.');
+    }
+  }
+}

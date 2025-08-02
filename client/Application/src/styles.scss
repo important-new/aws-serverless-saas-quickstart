@@ -1,0 +1,21 @@
+/* You can add global styles to this file, and also import other style files */
+@import url("https://fonts.googleapis.com/icon?family=Material+Symbols|Material+Symbols+Outlined");
+
+@import "styles/variables";
+// Import Bootstrap
+@import "bootstrap/scss/bootstrap";
+
+@import "styles/reset";
+
+.chart-container canvas {
+    max-height: 250px;
+    width: auto;
+}
+
+.chart-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
