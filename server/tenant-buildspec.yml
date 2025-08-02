@@ -5,7 +5,7 @@ version: 0.2
 phases:
   install:    
     runtime-versions:
-      python: 3.13 
+      python: 3.13
     commands:
       # Install packages or any pre-reqs in this phase.
       # Upgrading SAM CLI to 1.33.0 version
