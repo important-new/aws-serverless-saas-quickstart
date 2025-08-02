@@ -2,7 +2,7 @@ version = 0.1
 [default]
 [default.deploy]
 [default.deploy.parameters]
-stack_name = "pooled-tenant-stack"
+stack_name = "stack-pooled"
 resolve_s3 = true
 s3_prefix = "pooled-tenant"
 region = "us-east-1"
