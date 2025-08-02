@@ -28,7 +28,7 @@ Parameters:
     Description: "Stage Name for the api"
   LambdaReserveConcurrency:
     Type: Number
-    Default: 20
+    Default: 0
     Description: "Reserve concurrency for lambda function. You can customize this on per tenant basis, if needed, by storing in the tenant table"
 Conditions:
   IsPooledDeploy: !Equals [ !Ref TenantIdParameter, pooled]
