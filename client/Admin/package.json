@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "deploy": "node -e \"const {execSync} = require('child_process'); const bucket = execSync('aws cloudformation describe-stacks --stack-name saas-control-stack --query \\\"Stacks[0].Outputs[?OutputKey==\\'AdminSiteBucket\\'].OutputValue\\\" --output text', {encoding: 'utf8'}).trim(); execSync('aws s3 sync dist/ s3://' + bucket + ' --delete', {stdio: 'inherit'});\"",
+    "reset":"aws cloudfront create-invalidation --distribution-id E27FO2333W8Y9X --paths \"/*\""
   },
   "private": true,
   "dependencies": {
