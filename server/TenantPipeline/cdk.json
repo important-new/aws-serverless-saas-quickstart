@@ -4,6 +4,6 @@
     "githubOwner": "important-new",
     "githubRepo": "aws-serverless-saas-quickstart",
     "githubBranch": "main",
-    "githubTokenSecretName": "github-aws-workshop-token3"
+    "githubTokenSecretName": "github-aws-workshop-token3-V1daum"
   }
 }

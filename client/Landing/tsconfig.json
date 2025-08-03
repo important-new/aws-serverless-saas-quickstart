@@ -16,18 +16,15 @@
     "experimentalDecorators": true,
     "moduleResolution": "node",
     "importHelpers": true,
-    "target": "es2022",
+    "target": "es2020",
     "module": "es2020",
-    "lib": ["es2020", "dom"],
-    "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo"
+    "lib": ["es2020", "dom"]
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,
     "strictInputAccessModifiers": true,
     "strictTemplates": true,
-    "skipLibCheck": true,
-    "enableIvy": true
+    "skipLibCheck": true
   }
 }

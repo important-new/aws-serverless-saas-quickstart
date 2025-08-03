@@ -11,7 +11,7 @@ import {
 } from '@angular/router';
 
 import { AuthenticatorService } from '@aws-amplify/ui-angular';
-import { fetchAuthSession, signOut } from 'aws-amplify/auth';
+import { Auth } from 'aws-amplify';
 import { navItems } from '../_nav';
 import { AuthConfigurationService } from './../views/auth/auth-configuration.service';
 
@@ -26,7 +26,12 @@ export class NavComponent implements OnInit {
   username$: Observable<string> | undefined;
   companyName$: Observable<string> | undefined;
   public navItems = navItems;
-  isHandset$!: Observable<boolean>;
+  isHandset$: Observable<boolean> = this.breakpointObserver
+    .observe(Breakpoints.Handset)
+    .pipe(
+      map((result) => result.matches),
+      shareReplay()
+    );
 
   constructor(
     private breakpointObserver: BreakpointObserver,
@@ -44,18 +49,11 @@ export class NavComponent implements OnInit {
       ),
       map((e) => e instanceof NavigationStart)
     );
-    
-    this.isHandset$ = this.breakpointObserver
-      .observe(Breakpoints.Handset)
-      .pipe(
-        map((result) => result.matches),
-        shareReplay()
-      );
   }
 
   ngOnInit(): void {
     try {
-      const s = fetchAuthSession().catch((err: any) => {
+      const s = Auth.currentSession().catch((err) => {
         console.log('Failed to get current session. Err: ', err);
         return err;
       });
@@ -63,21 +61,21 @@ export class NavComponent implements OnInit {
       this.isAuthenticated$ = session$.pipe(
         filter((sesh) => !!sesh),
         map(
-          (sesh) => sesh && sesh.tokens && !!sesh.tokens.idToken
+          (sesh) => sesh && typeof sesh.isValid === 'function' && sesh.isValid()
         )
       );
 
       const token$ = session$.pipe(
         map(
           (sesh) =>
-            sesh && sesh.tokens?.idToken
+            sesh && typeof sesh.getIdToken === 'function' && sesh.getIdToken()
         )
       );
       this.username$ = token$.pipe(
-        map((t) => t && (t as any).payload && (t as any).payload['cognito:username'])
+        map((t) => t && t.payload && t.payload['cognito:username'])
       );
       this.companyName$ = token$.pipe(
-        map((t) => (t as any).payload && (t as any).payload['custom:company-name'])
+        map((t) => t.payload && t.payload['custom:company-name'])
       );
     } catch (err) {
       console.error('Unable to get current session.');
@@ -85,7 +83,7 @@ export class NavComponent implements OnInit {
   }
 
   async logout() {
-    await signOut({ global: true })
+    await Auth.signOut({ global: true })
       .then((e) => {
         this.authConfigService.cleanLocalStorage();
         this.router.navigate(['/unauthorized']);

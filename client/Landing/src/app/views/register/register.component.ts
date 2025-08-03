@@ -11,7 +11,13 @@ import { environment } from 'src/environments/environment';
 })
 export class RegisterComponent implements OnInit {
   submitting: boolean = false;
-  tenantForm!: FormGroup;
+  tenantForm: FormGroup = this.fb.group({
+    tenantName: ['', [Validators.required]],
+    tenantEmail: ['', [Validators.email, Validators.required]],
+    tenantTier: ['', [Validators.required]],
+    tenantPhone: [''],
+    tenantAddress: [''],
+  });
 
   constructor(
     private fb: FormBuilder,
@@ -19,15 +25,7 @@ export class RegisterComponent implements OnInit {
     private http: HttpClient
   ) {}
 
-  ngOnInit(): void {
-    this.tenantForm = this.fb.group({
-      tenantName: ['', [Validators.required]],
-      tenantEmail: ['', [Validators.email, Validators.required]],
-      tenantTier: ['', [Validators.required]],
-      tenantPhone: [''],
-      tenantAddress: [''],
-    });
-  }
+  ngOnInit(): void {}
 
   openErrorMessageSnackBar(errorMessage: string) {
     this._snackBar.open(errorMessage, 'Dismiss', {

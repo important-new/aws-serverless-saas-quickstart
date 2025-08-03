@@ -25,7 +25,8 @@ import { throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ConfigParams } from './models/config-params';
 import { ActivatedRoute } from '@angular/router';
-import { Amplify } from 'aws-amplify';
+import Amplify from 'aws-amplify';
+import { Auth } from 'aws-amplify';
 import { Router } from '@angular/router';
 import { from, Observable } from 'rxjs';
 
