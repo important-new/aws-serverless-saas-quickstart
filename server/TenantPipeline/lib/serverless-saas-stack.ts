@@ -26,13 +26,6 @@ export class ServerlessSaaSStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ServerlessSaaSStackProps) {
     super(scope, id, props);
 
-    console.log('Stack Props:', {
-      githubOwner: props.githubOwner,
-      githubRepo: props.githubRepo,
-      githubBranch: props.githubBranch,
-      githubTokenSecretName: props.githubTokenSecretName
-    });
-
     const artifactsBucket = new s3.Bucket(this, "ArtifactsBucket", {
       encryption: s3.BucketEncryption.S3_MANAGED,
     });
@@ -62,20 +55,7 @@ export class ServerlessSaaSStack extends cdk.Stack {
     });
 
     // Import GitHub token from Secrets Manager
-
-
-    const githubToken = secretsmanager.Secret.fromSecretAttributes(this, 'GitHubToken', {
-      secretCompleteArn: `arn:aws:secretsmanager:us-east-1:390403879075:secret:github-aws-workshop-token3-V1daum`,
-      // Alternatively, you can use secretName if you know the name and region  
-    });
-    
-    console.log('githubToken:',  {
-      secretName: githubToken.secretName,
-      secretArn: githubToken.secretArn,
-      secretValue: githubToken.secretValue.toString()
-    }
-
-    );
+    const githubToken = secretsmanager.Secret.fromSecretNameV2(this, 'GitHubToken', props.githubTokenSecretName);
 
     // Declare source code as an artifact
     const sourceOutput = new codepipeline.Artifact();

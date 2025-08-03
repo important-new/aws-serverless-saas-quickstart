@@ -11,10 +11,6 @@ const githubRepo = app.node.tryGetContext('githubRepo');
 const githubBranch = app.node.tryGetContext('githubBranch');
 const githubTokenSecretName = app.node.tryGetContext('githubTokenSecretName');
 
-console.log('Env Props:', {
-     githubOwner,githubRepo,githubBranch,githubTokenSecretName
-    });
-
 new ServerlessSaaSStack(app, 'serverless-saas-pipeline', {
   githubOwner,
   githubRepo,
