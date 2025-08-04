@@ -49,18 +49,18 @@ Resources:
   
   ProductTable:
     Type: AWS::DynamoDB::Table
-    Properties: 
+    Properties:
       AttributeDefinitions:
-        - AttributeName: shardId
-          AttributeType: S          
-        - AttributeName: productId
-          AttributeType: S          
+        - AttributeName: tenant_id
+          AttributeType: S
+        - AttributeName: product_id
+          AttributeType: S
       KeySchema:
-        - AttributeName: shardId
-          KeyType: HASH  
-        - AttributeName: productId
-          KeyType: RANGE  
-      ProvisionedThroughput: 
+        - AttributeName: tenant_id
+          KeyType: HASH
+        - AttributeName: product_id
+          KeyType: RANGE
+      ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
       TableName: !Join ['-', [Product, !Ref TenantIdParameter]]
@@ -72,14 +72,14 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties: 
       AttributeDefinitions:
-        - AttributeName: shardId
+        - AttributeName: tenant_id
           AttributeType: S 
-        - AttributeName: orderId
+        - AttributeName: order_id
           AttributeType: S          
       KeySchema:
-        - AttributeName: shardId
+        - AttributeName: tenant_id
           KeyType: HASH 
-        - AttributeName: orderId
+        - AttributeName: order_id
           KeyType: RANGE  
       ProvisionedThroughput: 
         ReadCapacityUnits: 5
@@ -987,10 +987,6 @@ Resources:
           PolicyDocument:
             Version: 2012-10-17
             Statement:
-              - Effect: Allow
-                Action:
-                  - kms:Decrypt
-                Resource: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
