@@ -19,12 +19,24 @@ export class OrdersService {
     return this.http.get<Order[]>(`${this.baseUrl}/orders`);
   }
 
-  get(orderId: string): Observable<Order> {
-    const url = `${this.baseUrl}/order/${orderId}`;
+  get(orderKey: string): Observable<Order> {
+    const url = `${this.baseUrl}/order/${orderKey}`;
     return this.http.get<Order>(url);
   }
 
   create(order: Order): Observable<Order> {
     return this.http.post<Order>(`${this.baseUrl}/order`, order);
+  }
+
+  update(order: Order): Observable<Order> {
+    const orderKey = `${order.tenantId}:${order.orderId}`;
+    const url = `${this.baseUrl}/order/${orderKey}`;
+    return this.http.put<Order>(url, order);
+  }
+
+  delete(order: Order): Observable<any> {
+    const orderKey = `${order.tenantId}:${order.orderId}`;
+    const url = `${this.baseUrl}/order/${orderKey}`;
+    return this.http.delete(url);
   }
 }

@@ -4,11 +4,14 @@
  */
 export interface Product {
   key: string;
-  shardId: string;
+  tenantId: string;
   productId: string;
   name: string;
   price: number;
   sku: string;
   category: string;
+  createdAt?: string;
+  updatedAt?: string;
+  entityType?: string;
   pictureUrl?: string;
 }

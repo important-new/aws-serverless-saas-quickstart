@@ -24,12 +24,12 @@ export class ProductService {
   }
 
   delete(product: Product) {
-    const url = `${this.baseUrl}/product/${product.shardId}:${product.productId}`;
+    const url = `${this.baseUrl}/product/${product.tenantId}:${product.productId}`;
     return this.http.delete<Product>(url);
   }
 
   put(product: Product) {
-    const url = `${this.baseUrl}/product/${product.shardId}:${product.productId}`;
+    const url = `${this.baseUrl}/product/${product.tenantId}:${product.productId}`;
     return this.http.put<Product>(url, product);
   }
   post(product: Product) {

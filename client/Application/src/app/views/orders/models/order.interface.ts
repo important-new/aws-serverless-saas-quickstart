@@ -5,9 +5,11 @@
 import { OrderProduct } from './orderproduct.interface';
 
 export interface Order {
-  key: string;
-  shardId: string;
+  tenantId: string;
   orderId: string;
   orderName: string;
   orderProducts: OrderProduct[];
+  createdAt?: string;
+  updatedAt?: string;
+  entityType?: string;
 }

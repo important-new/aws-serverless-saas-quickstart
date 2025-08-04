@@ -141,7 +141,7 @@ def __getPolicyForTenantAdmin(tenant_id, sevice_identifier, region, aws_account_
                     "Condition": {
                         "ForAllValues:StringLike": {
                             "dynamodb:LeadingKeys": [
-                                "{0}-*".format(tenant_id)
+                                "{0}".format(tenant_id)
                             ]
                         }
                     }
@@ -161,7 +161,7 @@ def __getPolicyForTenantAdmin(tenant_id, sevice_identifier, region, aws_account_
                     "Condition": {
                         "ForAllValues:StringLike": {
                             "dynamodb:LeadingKeys": [
-                                "{0}-*".format(tenant_id)
+                                "{0}".format(tenant_id)
                             ]
                         }
                     }
@@ -190,7 +190,7 @@ def __getPolicyForTenantUser(tenant_id, region, aws_account_id):
                   "Condition": {
                       "ForAllValues:StringLike": {
                           "dynamodb:LeadingKeys": [
-                              "{0}-*".format(tenant_id)
+                              "{0}".format(tenant_id)
                           ]
                       }
                   }
@@ -210,7 +210,7 @@ def __getPolicyForTenantUser(tenant_id, region, aws_account_id):
                   "Condition": {
                       "ForAllValues:StringLike": {
                           "dynamodb:LeadingKeys": [
-                              "{0}-*".format(tenant_id)
+                              "{0}".format(tenant_id)
                           ]
                       }
                   }

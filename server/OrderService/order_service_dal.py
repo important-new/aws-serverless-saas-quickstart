@@ -1,7 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-from pprint import pprint
 import os
 import boto3
 from botocore.exceptions import ClientError
@@ -11,8 +10,7 @@ import json
 import utils
 from types import SimpleNamespace
 import logger
-import random
-import threading
+from datetime import datetime
 from boto3.dynamodb.conditions import Key
 import metrics_manager
 
@@ -20,144 +18,186 @@ is_pooled_deploy = os.environ['IS_POOLED_DEPLOY']
 table_name = os.environ['ORDER_TABLE_NAME']
 dynamodb = None
 
-suffix_start = 1 
-suffix_end = 10
- 
-
 def get_order(event, key):
+    """
+    获取单个订单
+    使用新的键结构: tenant_id:order_id
+    """
     table = __get_dynamodb_table(event, dynamodb)
 
     try:
-        shardId = key.split(":")[0]
-        orderId = key.split(":")[1] 
-        logger.log_with_tenant_context(event, shardId)
-        logger.log_with_tenant_context(event, orderId)
-        response = table.get_item(Key={'shardId': shardId, 'orderId': orderId}, ReturnConsumedCapacity='TOTAL')
+        # 解析键: tenant_id:order_id
+        tenant_id, order_id = key.split(":", 1)
+        logger.log_with_tenant_context(event, f"Getting order: tenant_id={tenant_id}, order_id={order_id}")
+        
+        # 直接使用tenant_id和order_id作为键
+        response = table.get_item(
+            Key={'tenant_id': tenant_id, 'order_id': order_id},
+            ReturnConsumedCapacity='TOTAL'
+        )
+        
+        if 'Item' not in response:
+            raise Exception(f'Order not found: {key}')
+            
         item = response['Item']
-        order = Order(item['shardId'], item['orderId'], item['orderName'], item['orderProducts'])
+        order = Order.from_dynamodb_item(item)
 
         metrics_manager.record_metric(event, "ReadCapacityUnits", "Count", response['ConsumedCapacity']['CapacityUnits'])
 
     except ClientError as e:
         logger.error(e.response['Error']['Message'])
         raise Exception('Error getting a order', e)
+    except ValueError as e:
+        logger.error(f"Invalid key format: {key}")
+        raise Exception('Invalid key format', e)
     else:
+        logger.info(f"GetItem succeeded: {order}")
         return order
 
 def delete_order(event, key):
+    """
+    删除订单
+    """
     table = __get_dynamodb_table(event, dynamodb)
     
     try:
-        shardId = key.split(":")[0]
-        orderId = key.split(":")[1] 
-        response = table.delete_item(Key={'shardId':shardId, 'orderId': orderId}, ReturnConsumedCapacity='TOTAL')
+        # 解析键: tenant_id:order_id
+        tenant_id, order_id = key.split(":", 1)
+        logger.log_with_tenant_context(event, f"Deleting order: tenant_id={tenant_id}, order_id={order_id}")
+        
+        # 直接使用tenant_id和order_id作为键
+        response = table.delete_item(
+            Key={'tenant_id': tenant_id, 'order_id': order_id},
+            ReturnConsumedCapacity='TOTAL'
+        )
 
         metrics_manager.record_metric(event, "WriteCapacityUnits", "Count", response['ConsumedCapacity']['CapacityUnits'])
     except ClientError as e:
         logger.error(e.response['Error']['Message'])
         raise Exception('Error deleting a order', e)
+    except ValueError as e:
+        logger.error(f"Invalid key format: {key}")
+        raise Exception('Invalid key format', e)
     else:
-        logger.info("DeleteItem succeeded:")
+        logger.info("DeleteItem succeeded")
         return response
 
-
 def create_order(event, payload):
-    tenantId = event['requestContext']['authorizer']['tenantId']
+    """
+    创建新订单
+    使用租户ID作为分区键，UUID作为排序键
+    """
+    tenant_id = event['requestContext']['authorizer']['tenantId']
     table = __get_dynamodb_table(event, dynamodb)
-    suffix = random.randrange(suffix_start, suffix_end)
-    shardId = tenantId+"-"+str(suffix)
     
-    order = Order(shardId, str(uuid.uuid4()), payload.orderName, payload.orderProducts)
+    # 生成订单ID
+    order_id = str(uuid.uuid4())
+    
+    # 创建订单对象
+    order = Order(
+        tenant_id=tenant_id,
+        order_id=order_id,
+        order_name=payload.orderName,
+        order_products=payload.orderProducts
+    )
 
     try:
-        response = table.put_item(Item={
-        'shardId':shardId,
-        'orderId': order.orderId, 
-        'orderName': order.orderName,
-        'orderProducts': get_order_products_dict(order.orderProducts)
-        }, ReturnConsumedCapacity='TOTAL')
+        # 转换为DynamoDB格式
+        item = order.to_dynamodb_item()
+        
+        response = table.put_item(
+            Item=item,
+            ReturnConsumedCapacity='TOTAL'
+        )
 
         metrics_manager.record_metric(event, "WriteCapacityUnits", "Count", response['ConsumedCapacity']['CapacityUnits'])
     except ClientError as e:
         logger.error(e.response['Error']['Message'])
         raise Exception('Error adding a order', e)
     else:
-        logger.info("PutItem succeeded:")
+        logger.info(f"PutItem succeeded: {order}")
         return order
 
 def update_order(event, payload, key):
+    """
+    更新订单
+    """
     table = __get_dynamodb_table(event, dynamodb)
     
     try:
-        shardId = key.split(":")[0]
-        orderId = key.split(":")[1] 
-        logger.log_with_tenant_context(event, shardId)
-        logger.log_with_tenant_context(event, orderId)
-        order = Order(shardId, orderId,payload.orderName, payload.orderProducts)
-        response = table.update_item(Key={'shardId':order.shardId, 'orderId': order.orderId},
-        UpdateExpression="set orderName=:orderName, "
-        +"orderProducts=:orderProducts",
-        ExpressionAttributeValues={
-            ':orderName': order.orderName,
-            ':orderProducts': get_order_products_dict(order.orderProducts)
-        },
-        ReturnValues="UPDATED_NEW", ReturnConsumedCapacity='TOTAL')
+        # 解析键: tenant_id:order_id
+        tenant_id, order_id = key.split(":", 1)
+        logger.log_with_tenant_context(event, f"Updating order: tenant_id={tenant_id}, order_id={order_id}")
+        
+        # 直接使用tenant_id和order_id作为键
+        response = table.update_item(
+            Key={'tenant_id': tenant_id, 'order_id': order_id},
+            UpdateExpression="set order_name=:orderName, order_products=:orderProducts, updated_at=:updated_at",
+            ExpressionAttributeValues={
+                ':orderName': payload.orderName,
+                ':orderProducts': get_order_products_dict(payload.orderProducts),
+                ':updated_at': datetime.now(datetime.UTC).isoformat()
+            },
+            ReturnValues="UPDATED_NEW",
+            ReturnConsumedCapacity='TOTAL'
+        )
+        
+        # 创建更新后的订单对象
+        updated_item = response['Attributes']
+        order = Order.from_dynamodb_item(updated_item)
 
         metrics_manager.record_metric(event, "WriteCapacityUnits", "Count", response['ConsumedCapacity']['CapacityUnits'])
     except ClientError as e:
         logger.error(e.response['Error']['Message'])
         raise Exception('Error updating a order', e)
+    except ValueError as e:
+        logger.error(f"Invalid key format: {key}")
+        raise Exception('Invalid key format', e)
     else:
-        logger.info("UpdateItem succeeded:")
+        logger.info(f"UpdateItem succeeded: {order}")
         return order
 
-def get_orders(event, tenantId):
+def get_orders(event, tenant_id):
+    """
+    获取租户的所有订单
+    使用简化的查询，无需分片
+    """
     table = __get_dynamodb_table(event, dynamodb)
-    get_all_products_response = []
-
-    try:
-        __query_all_partitions(tenantId,get_all_products_response, table, event)
-    except ClientError as e:
-        logger.error("Error getting all orders")
-        raise Exception('Error getting all orders', e) 
-    else:
-        logger.info("Get orders succeeded")
-        return get_all_products_response
-
-def __query_all_partitions(tenantId,get_all_products_response, table, event):
-    threads = []    
     
-    for suffix in range(suffix_start, suffix_end):
-        partition_id = tenantId+'-'+str(suffix)
-        
-        thread = threading.Thread(target=__get_tenant_data, args=[partition_id, get_all_products_response, table, event])
-        threads.append(thread)
-        
-    # Start threads
-    for thread in threads:
-        thread.start()
-    # Ensure all threads are finished
-    for thread in threads:
-        thread.join()
-           
-def __get_tenant_data(partition_id, get_all_products_response, table, event):    
-    logger.info(partition_id)
-    response = table.query(KeyConditionExpression=Key('shardId').eq(partition_id), ReturnConsumedCapacity='TOTAL')    
-    if (len(response['Items']) > 0):
-        for item in response['Items']:
-            order = Order(item['shardId'], item['orderId'], item['orderName'], item['orderProducts'])
-            get_all_products_response.append(order)
+    try:
+        logger.log_with_tenant_context(event, f"Getting all orders for tenant: {tenant_id}")
 
-    metrics_manager.record_metric(event, "ReadCapacityUnits", "Count", response['ConsumedCapacity']['CapacityUnits'])        
+        # 直接使用租户ID作为分区键查询
+        response = table.query(
+            KeyConditionExpression=Key('tenant_id').eq(tenant_id),
+            ReturnConsumedCapacity='TOTAL'
+        )
+        
+        # 转换为Order对象列表
+        orders = [Order.from_dynamodb_item(item) for item in response['Items']]
+        
+        # 处理分页（如果需要）
+        while 'LastEvaluatedKey' in response:
+            response = table.query(
+                KeyConditionExpression=Key('tenant_id').eq(tenant_id),
+                ExclusiveStartKey=response['LastEvaluatedKey'],
+                ReturnConsumedCapacity='TOTAL'
+            )
+            orders.extend([Order.from_dynamodb_item(item) for item in response['Items']])
+        
+        metrics_manager.record_metric(event, "ReadCapacityUnits", "Count", response['ConsumedCapacity']['CapacityUnits'])
+        
+    except ClientError as e:
+        logger.error(e.response['Error']['Message'])
+        raise Exception('Error getting all orders', e)
+    else:
+        logger.info(f"Get orders succeeded: {len(orders)} orders found")
+        return orders
 
 def __get_dynamodb_table(event, dynamodb):
-    """ Determine the table name based upo pooled vs silo model
-
-    Args:
-        event ([type]): [description]
-
-    Returns:
-        [type]: [description]
+    """
+    获取DynamoDB表实例
+    支持池化和专用部署模式
     """
     if (is_pooled_deploy=='true'):
         accesskey = event['requestContext']['authorizer']['accesskey']
@@ -174,12 +214,14 @@ def __get_dynamodb_table(event, dynamodb):
         
     return dynamodb.Table(table_name)
 
-def get_order_products_dict(orderProducts):
-    orderProductList = []
-    for i in range(len(orderProducts)):
-        product = orderProducts[i]
-        orderProductList.append(vars(product))
-    return orderProductList    
+def get_order_products_dict(order_products):
+    """
+    将订单产品列表转换为字典格式
+    """
+    order_product_list = []
+    for product in order_products:
+        order_product_list.append(vars(product))
+    return order_product_list    
 
   
 
