@@ -24,6 +24,94 @@
 - **CloudFormation/SAM**: 基础设施即代码
 - **Python 3.9**: 后端开发语言
 
+### 数据库设计规则
+
+#### DynamoDB 表设计原则
+
+基于AWS官方推荐的最佳实践，本项目采用简化的分区键设计，移除了复杂的分片策略，以提高性能和降低成本。
+
+##### 核心设计原则
+
+1. **均匀分布**: 使用租户ID作为分区键，确保数据均匀分布
+2. **避免热点**: 每个租户独立分区，避免热点问题
+3. **可预测访问**: 基于租户的访问模式更加可预测
+4. **简化查询**: 无需复杂的并行查询逻辑
+
+##### 标准表结构
+
+```python
+# 统一的数据模型设计
+{
+    "tenant_id": "tenant1",           # 分区键 (HASH)
+    "entity_id": "uuid-123",         # 排序键 (RANGE)
+    "entity_type": "PRODUCT",        # 实体类型标识
+    "created_at": "2024-01-01T00:00:00Z",  # 创建时间
+    "updated_at": "2024-01-01T00:00:00Z",  # 更新时间
+    # ... 业务字段
+}
+```
+
+##### CloudFormation 表定义
+
+```yaml
+# 标准表结构模板
+TableName:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    AttributeDefinitions:
+      - AttributeName: tenant_id
+        AttributeType: S
+      - AttributeName: entity_id
+        AttributeType: S
+    KeySchema:
+      - AttributeName: tenant_id
+        KeyType: HASH
+      - AttributeName: entity_id
+        KeyType: RANGE
+    ProvisionedThroughput:
+      ReadCapacityUnits: 5
+      WriteCapacityUnits: 5
+```
+
+##### 查询策略
+
+```python
+# 标准查询模式
+response = table.query(
+    KeyConditionExpression=Key('tenant_id').eq(tenant_id),
+    ReturnConsumedCapacity='TOTAL'
+)
+```
+
+##### 性能优化考虑
+
+- **小数据量**（< 1000个实体/租户）：简单查询足够
+- **大数据量**（> 1000个实体/租户）：可考虑添加GSI
+- **成本敏感**：当前设计最小化存储成本
+
+##### 数据迁移策略
+
+1. **备份现有数据**
+2. **运行迁移脚本**
+3. **验证迁移结果**
+4. **更新应用程序代码**
+5. **删除旧数据**
+
+##### 监控指标
+
+- 查询延迟
+- 吞吐量
+- 错误率
+- 成本
+
+##### 重构优势
+
+✅ **极简设计** - 最少的字段和索引  
+✅ **成本优化** - 减少存储和写入开销  
+✅ **性能提升** - 简化查询逻辑  
+✅ **易于维护** - 减少代码复杂度  
+✅ **可扩展性** - 为未来增长预留空间
+
 ### 前端应用 (client/)
 - **Angular 14**: 现代化Web应用框架
 - **TypeScript**: 类型安全的JavaScript
