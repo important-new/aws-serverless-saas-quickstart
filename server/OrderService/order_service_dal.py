@@ -8,7 +8,6 @@ import uuid
 from order_models import Order
 import json
 import utils
-from types import SimpleNamespace
 import logger
 from datetime import datetime
 from boto3.dynamodb.conditions import Key
@@ -97,8 +96,8 @@ def create_order(event, payload):
     order = Order(
         tenant_id=tenant_id,
         order_id=order_id,
-        order_name=payload.orderName,
-        order_products=payload.orderProducts
+        order_name=payload['orderName'],
+        order_products=payload['orderProducts']
     )
 
     try:
@@ -134,8 +133,8 @@ def update_order(event, payload, key):
             Key={'tenant_id': tenant_id, 'order_id': order_id},
             UpdateExpression="set order_name=:orderName, order_products=:orderProducts, updated_at=:updated_at",
             ExpressionAttributeValues={
-                ':orderName': payload.orderName,
-                ':orderProducts': get_order_products_dict(payload.orderProducts),
+                ':orderName': payload['orderName'],
+                ':orderProducts': get_order_products_dict(payload['orderProducts']),
                 ':updated_at': datetime.now(datetime.UTC).isoformat()
             },
             ReturnValues="UPDATED_NEW",

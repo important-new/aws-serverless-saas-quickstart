@@ -11,7 +11,6 @@ import metrics_manager
 from datetime import datetime
 
 from product_models import Product
-from types import SimpleNamespace
 from boto3.dynamodb.conditions import Key, Attr
 
 # 环境变量
@@ -99,10 +98,10 @@ def create_product(event, payload):
     product = Product(
         tenant_id=tenant_id,
         product_id=product_id,
-        sku=payload.sku,
-        name=payload.name,
-        price=payload.price,
-        category=payload.category
+        sku=payload['sku'],
+        name=payload['name'],
+        price=payload['price'],
+        category=payload['category']
     )
     
     try:
@@ -140,10 +139,10 @@ def update_product(event, payload, key):
             UpdateExpression="set sku=:sku, #n=:productName, price=:price, category=:category, updated_at=:updated_at",
             ExpressionAttributeNames={'#n': 'name'},
             ExpressionAttributeValues={
-                ':sku': payload.sku,
-                ':productName': payload.name,
-                ':price': payload.price,
-                ':category': payload.category,
+                ':sku': payload['sku'],
+                ':productName': payload['name'],
+                ':price': payload['price'],
+                ':category': payload['category'],
                 ':updated_at': datetime.datetime.now(datetime.UTC).isoformat()
             },
             ReturnValues="UPDATED_NEW",

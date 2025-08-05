@@ -8,7 +8,6 @@ import metrics_manager
 import product_service_dal
 from aws_lambda_powertools import Tracer
 from decimal import Decimal
-from types import SimpleNamespace
 tracer = Tracer()
 
 @tracer.capture_lambda_handler
@@ -33,7 +32,7 @@ def create_product(event, context):
     tracer.put_annotation(key="TenantId", value=tenantId)
 
     logger.log_with_tenant_context(event, "Request received to create a product")
-    payload = json.loads(event['body'], object_hook=lambda d: SimpleNamespace(**d), parse_float=Decimal)
+    payload = json.loads(event['body'], parse_float=Decimal)
     product = product_service_dal.create_product(event, payload)
     logger.log_with_tenant_context(event, "Request completed to create a product")
     metrics_manager.record_metric(event, "ProductCreated", "Count", 1)
@@ -45,7 +44,7 @@ def update_product(event, context):
     tracer.put_annotation(key="TenantId", value=tenantId)
 
     logger.log_with_tenant_context(event, "Request received to update a product")
-    payload = json.loads(event['body'], object_hook=lambda d: SimpleNamespace(**d), parse_float=Decimal)
+    payload = json.loads(event['body'], parse_float=Decimal)
     params = event['pathParameters']
     key = params['id']
     product = product_service_dal.update_product(event, payload, key)
