@@ -1,0 +1,234 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Order Service Module for Serverless SaaS
+
+Globals:
+  Function:
+    Timeout: 29
+    Runtime: python3.13
+    Layers:
+      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
+    Environment:
+        Variables:
+          LOG_LEVEL: DEBUG         
+          POWERTOOLS_METRICS_NAMESPACE: "ServerlessSaaS"
+          
+Parameters:
+  TenantIdParameter:
+    Type: String
+    Default: pooled
+    Description: Tenant ID for the stack
+  StageName:
+    Type: String
+    Default: "prod"
+    Description: "Stage Name for the api"
+  LambdaReserveConcurrency:
+    Type: Number
+    Default: 0
+    Description: "Reserve concurrency for lambda function"
+
+Conditions:
+  IsPooledDeploy: !Equals [ !Ref TenantIdParameter, pooled]
+  IsSiloDeploy: !Not [!Equals [ !Ref TenantIdParameter, pooled]]     
+
+Resources: 
+  ServerlessSaaSLayers:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Join ['-', [serverless-saas-dependencies-order, !Ref TenantIdParameter]]
+      Description: Utilities for order service
+      ContentUri: ../../shared/layers/
+      CompatibleRuntimes:
+        - python3.13          
+      LicenseInfo: 'MIT'
+      RetentionPolicy: Retain      
+    Metadata:
+      BuildMethod: python3.13   
+
+  OrderTable:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      AttributeDefinitions:
+        - AttributeName: tenant_id
+          AttributeType: S 
+        - AttributeName: order_id
+          AttributeType: S          
+      KeySchema:
+        - AttributeName: tenant_id
+          KeyType: HASH 
+        - AttributeName: order_id
+          KeyType: RANGE  
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName: !Join ['-', [Order, !Ref TenantIdParameter]]
+      Tags:
+        - Key: "TenantId"
+          Value: !Ref TenantIdParameter
+
+  OrderFunctionExecutionRolePolicy:
+    Condition: IsSiloDeploy
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Join ['-', [!Ref TenantIdParameter, order-function-policy]]
+      Roles: 
+        - !Ref OrderFunctionExecutionRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:              
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:DeleteItem
+              - dynamodb:Query
+            Resource:
+              - !GetAtt OrderTable.Arn
+
+  OrderFunctionExecutionRole:
+    Type: AWS::IAM::Role     
+    Properties:
+      RoleName: !Join ['-', [!Ref TenantIdParameter, order-function-execution-role]]
+      Path: '/'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy    
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+                
+  GetOrdersFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: src/
+      Handler: order_service.get_orders
+      Tracing: Active
+      Role: !GetAtt OrderFunctionExecutionRole.Arn
+      ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref LambdaReserveConcurrency]
+      Layers: 
+        - !Ref ServerlessSaaSLayers
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: "OrderService"
+          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
+          ORDER_TABLE_NAME: !Ref OrderTable
+      Tags:
+        TenantId: !Ref TenantIdParameter
+
+  GetOrderFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: src/
+      Handler: order_service.get_order
+      Tracing: Active
+      Role: !GetAtt OrderFunctionExecutionRole.Arn
+      ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref LambdaReserveConcurrency]
+      Layers: 
+        - !Ref ServerlessSaaSLayers
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: "OrderService"
+          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
+          ORDER_TABLE_NAME: !Ref OrderTable
+      Tags:
+        TenantId: !Ref TenantIdParameter
+
+  CreateOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: order_service.create_order
+      Tracing: Active 
+      Role: !GetAtt OrderFunctionExecutionRole.Arn 
+      Layers: 
+        - !Ref ServerlessSaaSLayers
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: "OrderService"
+          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
+          ORDER_TABLE_NAME: !Ref OrderTable
+      Tags:
+        TenantId: !Ref TenantIdParameter
+
+  UpdateOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: order_service.update_order
+      Tracing: Active
+      Role: !GetAtt OrderFunctionExecutionRole.Arn 
+      Layers: 
+        - !Ref ServerlessSaaSLayers
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: "OrderService"
+          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
+          ORDER_TABLE_NAME: !Ref OrderTable
+      Tags:
+        TenantId: !Ref TenantIdParameter
+
+  DeleteOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: order_service.delete_order
+      Tracing: Active
+      Role: !GetAtt OrderFunctionExecutionRole.Arn 
+      Layers: 
+        - !Ref ServerlessSaaSLayers
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: "OrderService"
+          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
+          ORDER_TABLE_NAME: !Ref OrderTable
+      Tags:
+        TenantId: !Ref TenantIdParameter
+
+Outputs:
+  OrderTableName:
+    Description: "Order table name"
+    Value: !Ref OrderTable
+    Export:
+      Name: !Sub "${AWS::StackName}-OrderTableName"
+      
+  GetOrdersFunctionArn:
+    Description: "Get Orders Function ARN"
+    Value: !GetAtt GetOrdersFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-GetOrdersFunctionArn"
+      
+  GetOrderFunctionArn:
+    Description: "Get Order Function ARN"
+    Value: !GetAtt GetOrderFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-GetOrderFunctionArn"
+      
+  CreateOrderFunctionArn:
+    Description: "Create Order Function ARN"
+    Value: !GetAtt CreateOrderFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-CreateOrderFunctionArn"
+      
+  UpdateOrderFunctionArn:
+    Description: "Update Order Function ARN"
+    Value: !GetAtt UpdateOrderFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-UpdateOrderFunctionArn"
+      
+  DeleteOrderFunctionArn:
+    Description: "Delete Order Function ARN"
+    Value: !GetAtt DeleteOrderFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-DeleteOrderFunctionArn"

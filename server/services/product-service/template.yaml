@@ -1,0 +1,234 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Product Service Module for Serverless SaaS
+
+Globals:
+  Function:
+    Timeout: 29
+    Runtime: python3.13
+    Layers:
+      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
+    Environment:
+        Variables:
+          LOG_LEVEL: DEBUG         
+          POWERTOOLS_METRICS_NAMESPACE: "ServerlessSaaS"
+          
+Parameters:
+  TenantIdParameter:
+    Type: String
+    Default: pooled
+    Description: Tenant ID for the stack
+  StageName:
+    Type: String
+    Default: "prod"
+    Description: "Stage Name for the api"
+  LambdaReserveConcurrency:
+    Type: Number
+    Default: 0
+    Description: "Reserve concurrency for lambda function"
+
+Conditions:
+  IsPooledDeploy: !Equals [ !Ref TenantIdParameter, pooled]
+  IsSiloDeploy: !Not [!Equals [ !Ref TenantIdParameter, pooled]]     
+
+Resources: 
+  ServerlessSaaSLayers:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Join ['-', [serverless-saas-dependencies-product, !Ref TenantIdParameter]]
+      Description: Utilities for product service
+      ContentUri: ../../shared/layers/
+      CompatibleRuntimes:
+        - python3.13          
+      LicenseInfo: 'MIT'
+      RetentionPolicy: Retain      
+    Metadata:
+      BuildMethod: python3.13   
+  
+  ProductTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: tenant_id
+          AttributeType: S
+        - AttributeName: product_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: tenant_id
+          KeyType: HASH
+        - AttributeName: product_id
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName: !Join ['-', [Product, !Ref TenantIdParameter]]
+      Tags:
+        - Key: "TenantId"
+          Value: !Ref TenantIdParameter
+
+  ProductFunctionExecutionRolePolicy:
+    Condition: IsSiloDeploy
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Join ['-', [!Ref TenantIdParameter, product-function-policy]]
+      Roles: 
+        - !Ref ProductFunctionExecutionRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:              
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:DeleteItem
+              - dynamodb:Query
+            Resource:
+              - !GetAtt ProductTable.Arn
+
+  ProductFunctionExecutionRole:
+    Type: AWS::IAM::Role     
+    Properties:
+      RoleName: !Join ['-', [!Ref TenantIdParameter, product-function-execution-role]]
+      Path: '/'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy    
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+             
+  GetProductFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: src/
+      Handler: product_service.get_product
+      Tracing: Active
+      Role: !GetAtt ProductFunctionExecutionRole.Arn
+      ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref LambdaReserveConcurrency]
+      Layers: 
+        - !Ref ServerlessSaaSLayers
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: "ProductService"
+          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
+          PRODUCT_TABLE_NAME: !Ref ProductTable      
+      Tags:
+        TenantId: !Ref TenantIdParameter
+
+  GetProductsFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: src/
+      Handler: product_service.get_products
+      Tracing: Active
+      Role: !GetAtt ProductFunctionExecutionRole.Arn
+      ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref LambdaReserveConcurrency]
+      Layers: 
+        - !Ref ServerlessSaaSLayers
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: "ProductService"
+          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
+          PRODUCT_TABLE_NAME: !Ref ProductTable
+      Tags:
+        TenantId: !Ref TenantIdParameter
+
+  CreateProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: product_service.create_product
+      Tracing: Active 
+      Role: !GetAtt ProductFunctionExecutionRole.Arn 
+      Layers: 
+        - !Ref ServerlessSaaSLayers
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: "ProductService"
+          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
+          PRODUCT_TABLE_NAME: !Ref ProductTable
+      Tags:
+        TenantId: !Ref TenantIdParameter
+
+  UpdateProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: product_service.update_product
+      Tracing: Active
+      Role: !GetAtt ProductFunctionExecutionRole.Arn 
+      Layers: 
+        - !Ref ServerlessSaaSLayers
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: "ProductService"
+          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
+          PRODUCT_TABLE_NAME: !Ref ProductTable
+      Tags:
+        TenantId: !Ref TenantIdParameter
+
+  DeleteProductFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: product_service.delete_product
+      Tracing: Active
+      Role: !GetAtt ProductFunctionExecutionRole.Arn 
+      Layers: 
+        - !Ref ServerlessSaaSLayers
+      Environment:
+        Variables:
+          POWERTOOLS_SERVICE_NAME: "ProductService"
+          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
+          PRODUCT_TABLE_NAME: !Ref ProductTable
+      Tags:
+        TenantId: !Ref TenantIdParameter
+
+Outputs:
+  ProductTableName:
+    Description: "Product table name"
+    Value: !Ref ProductTable
+    Export:
+      Name: !Sub "${AWS::StackName}-ProductTableName"
+      
+  GetProductFunctionArn:
+    Description: "Get Product Function ARN"
+    Value: !GetAtt GetProductFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-GetProductFunctionArn"
+      
+  GetProductsFunctionArn:
+    Description: "Get Products Function ARN"
+    Value: !GetAtt GetProductsFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-GetProductsFunctionArn"
+      
+  CreateProductFunctionArn:
+    Description: "Create Product Function ARN"
+    Value: !GetAtt CreateProductFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-CreateProductFunctionArn"
+      
+  UpdateProductFunctionArn:
+    Description: "Update Product Function ARN"
+    Value: !GetAtt UpdateProductFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-UpdateProductFunctionArn"
+      
+  DeleteProductFunctionArn:
+    Description: "Delete Product Function ARN"
+    Value: !GetAtt DeleteProductFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-DeleteProductFunctionArn"

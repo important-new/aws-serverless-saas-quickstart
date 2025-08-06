@@ -1,0 +1,15 @@
+version = 0.1
+[default]
+[default.build]
+[default.build.parameters]
+use_container = true
+
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "product-service"
+resolve_s3 = true
+s3_prefix = "product-service"
+region = "us-east-1"
+confirm_changeset = false
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "TenantIdParameter=pooled"

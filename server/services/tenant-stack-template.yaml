@@ -1,0 +1,113 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Unified Tenant Stack using Nested Templates - Serverless SaaS Reference Architecture
+
+Parameters:
+  TenantIdParameter:
+    Type: String
+    Default: pooled
+    Description: Tenant ID for the stack
+  StageName:
+    Type: String
+    Default: "prod"
+    Description: "Stage Name for the api"
+  LambdaReserveConcurrency:
+    Type: Number
+    Default: 0
+    Description: "Reserve concurrency for lambda function"
+
+
+
+Resources:
+  # Product Service Nested Stack
+  ProductServiceStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: product-service/template.yaml
+      Parameters:
+        TenantIdParameter: !Ref TenantIdParameter
+        StageName: !Ref StageName
+        LambdaReserveConcurrency: !Ref LambdaReserveConcurrency
+      Tags:
+        TenantId: !Ref TenantIdParameter
+        Service: ProductService
+
+  # Order Service Nested Stack
+  OrderServiceStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: order-service/template.yaml
+      Parameters:
+        TenantIdParameter: !Ref TenantIdParameter
+        StageName: !Ref StageName
+        LambdaReserveConcurrency: !Ref LambdaReserveConcurrency
+      Tags:
+        TenantId: !Ref TenantIdParameter
+        Service: OrderService
+
+  # Tenant API Stack (depends on business services)
+  TenantApiStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: tenant-api/template.yaml
+      Parameters:
+        TenantIdParameter: !Ref TenantIdParameter
+        StageName: !Ref StageName
+        ProductServiceStackName: !Sub "${AWS::StackName}-ProductServiceStack"
+        OrderServiceStackName: !Sub "${AWS::StackName}-OrderServiceStack"
+        # Product Service Function ARNs
+        GetProductFunctionArn: !GetAtt ProductServiceStack.Outputs.GetProductFunctionArn
+        GetProductsFunctionArn: !GetAtt ProductServiceStack.Outputs.GetProductsFunctionArn
+        CreateProductFunctionArn: !GetAtt ProductServiceStack.Outputs.CreateProductFunctionArn
+        UpdateProductFunctionArn: !GetAtt ProductServiceStack.Outputs.UpdateProductFunctionArn
+        DeleteProductFunctionArn: !GetAtt ProductServiceStack.Outputs.DeleteProductFunctionArn
+        # Order Service Function ARNs
+        GetOrderFunctionArn: !GetAtt OrderServiceStack.Outputs.GetOrderFunctionArn
+        GetOrdersFunctionArn: !GetAtt OrderServiceStack.Outputs.GetOrdersFunctionArn
+        CreateOrderFunctionArn: !GetAtt OrderServiceStack.Outputs.CreateOrderFunctionArn
+        UpdateOrderFunctionArn: !GetAtt OrderServiceStack.Outputs.UpdateOrderFunctionArn
+        DeleteOrderFunctionArn: !GetAtt OrderServiceStack.Outputs.DeleteOrderFunctionArn
+      Tags:
+        TenantId: !Ref TenantIdParameter
+        Service: TenantAPI
+
+Outputs:
+  # Product Service Outputs
+  ProductTableName:
+    Description: "Product table name"
+    Value: !GetAtt ProductServiceStack.Outputs.ProductTableName
+    Export:
+      Name: !Sub "${AWS::StackName}-ProductTableName"
+
+  # Order Service Outputs  
+  OrderTableName:
+    Description: "Order table name"
+    Value: !GetAtt OrderServiceStack.Outputs.OrderTableName
+    Export:
+      Name: !Sub "${AWS::StackName}-OrderTableName"
+
+  # Tenant API Outputs
+  TenantApiGatewayUrl:
+    Description: "Tenant API Gateway URL"
+    Value: !GetAtt TenantApiStack.Outputs.TenantApiGatewayUrl
+    Export:
+      Name: !Sub "${AWS::StackName}-TenantApiGatewayUrl"
+      
+  TenantApiGatewayId:
+    Description: "Tenant API Gateway ID"
+    Value: !GetAtt TenantApiStack.Outputs.TenantApiGatewayId
+    Export:
+      Name: !Sub "${AWS::StackName}-TenantApiGatewayId"
+
+  # Legacy Compatibility Outputs (matching original tenant-template.yaml)
+  TenantAPI:
+    Description: "API Gateway endpoint URL for Tenant API"
+    Value: !GetAtt TenantApiStack.Outputs.TenantApiGatewayUrl
+
+  TenantApiGatewayIdLegacy:
+    Description: "Id for Tenant API Gateway"
+    Value: !GetAtt TenantApiStack.Outputs.TenantApiGatewayId

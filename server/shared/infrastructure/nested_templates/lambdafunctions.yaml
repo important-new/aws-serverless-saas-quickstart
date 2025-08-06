@@ -53,7 +53,7 @@ Resources:
     Properties:
       LayerName: serverless-saas-dependencies
       Description: Utilities for project
-      ContentUri: ../layers/
+      ContentUri: ../../layers/
       CompatibleRuntimes:
         - python3.13
       LicenseInfo: "MIT"
@@ -130,7 +130,7 @@ Resources:
     Type: AWS::Serverless::Function 
     DependsOn: AuthorizerAccessRole
     Properties:
-      CodeUri: ../Resources/
+      CodeUri: ../../resources/
       Handler: shared_service_authorizer.lambda_handler
       Runtime: python3.13
       Role: !GetAtt AuthorizerExecutionRole.Arn
@@ -226,7 +226,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: CreateUserLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: user-management.create_tenant_admin_user
       Runtime: python3.13
       Role: !GetAtt CreateUserLambdaExecutionRole.Arn      
@@ -245,7 +245,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: CreateUserLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: user-management.create_user
       Runtime: python3.13
       Role: !GetAtt CreateUserLambdaExecutionRole.Arn
@@ -260,7 +260,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantUserPoolLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: user-management.update_user
       Runtime: python3.13
       Role: !GetAtt TenantUserPoolLambdaExecutionRole.Arn
@@ -275,7 +275,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantUserPoolLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: user-management.disable_user
       Runtime: python3.13
       Role: !GetAtt TenantUserPoolLambdaExecutionRole.Arn
@@ -290,7 +290,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantUserPoolLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: user-management.disable_users_by_tenant
       Runtime: python3.13
       Role: !GetAtt TenantUserPoolLambdaExecutionRole.Arn
@@ -305,7 +305,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantUserPoolLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: user-management.enable_users_by_tenant
       Runtime: python3.13
       Role: !GetAtt TenantUserPoolLambdaExecutionRole.Arn
@@ -320,7 +320,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantUserPoolLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: user-management.get_user
       Runtime: python3.13
       Role: !GetAtt TenantUserPoolLambdaExecutionRole.Arn
@@ -335,7 +335,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantUserPoolLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: user-management.get_users
       Runtime: python3.13
       Role: !GetAtt TenantUserPoolLambdaExecutionRole.Arn
@@ -390,7 +390,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantManagementLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: tenant-management.create_tenant
       Runtime: python3.13
       Role: !GetAtt TenantManagementLambdaExecutionRole.Arn
@@ -405,7 +405,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantManagementLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: tenant-management.activate_tenant
       Runtime: python3.13
       Role: !GetAtt TenantManagementLambdaExecutionRole.Arn
@@ -422,7 +422,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantManagementLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: tenant-management.get_tenant
       Runtime: python3.13
       Role: !GetAtt TenantManagementLambdaExecutionRole.Arn
@@ -437,7 +437,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantManagementLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: tenant-management.deactivate_tenant
       Runtime: python3.13
       Role: !GetAtt TenantManagementLambdaExecutionRole.Arn
@@ -454,7 +454,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantManagementLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: tenant-management.update_tenant
       Runtime: python3.13
       Role: !GetAtt TenantManagementLambdaExecutionRole.Arn
@@ -473,7 +473,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantManagementLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: tenant-management.get_tenants
       Runtime: python3.13
       Role: !GetAtt TenantManagementLambdaExecutionRole.Arn
@@ -485,7 +485,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: TenantManagementLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: tenant-management.load_tenant_config
       Runtime: python3.13
       Role: !GetAtt TenantManagementLambdaExecutionRole.Arn
@@ -517,7 +517,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: RegisterTenantLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: tenant-registration.register_tenant
       Runtime: python3.13
       Role: !GetAtt RegisterTenantLambdaExecutionRole.Arn
@@ -578,7 +578,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: ProvisionTenantLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: tenant-provisioning.provision_tenant
       Runtime: python3.13
       Role: !GetAtt ProvisionTenantLambdaExecutionRole.Arn
@@ -621,7 +621,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: DeProvisionTenantLambdaExecutionRole
     Properties:
-      CodeUri: ../TenantManagementService/
+      CodeUri: ../tenant-management/
       Handler: tenant-provisioning.deprovision_tenant
       Runtime: python3.13
       Role: !GetAtt DeProvisionTenantLambdaExecutionRole.Arn
@@ -663,7 +663,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: UpdateSettingsTableLambdaExecutionRole
     Properties:
-      CodeUri: ../custom_resources/
+      CodeUri: ../../custom_resources/
       Handler: update_settings_table.handler
       Runtime: python3.13
       Role: !GetAtt UpdateSettingsTableLambdaExecutionRole.Arn
@@ -700,7 +700,7 @@ Resources:
     Type: AWS::Serverless::Function
     DependsOn: UpdateTenantStackMapTableLambdaExecutionRole
     Properties:
-      CodeUri: ../custom_resources/
+      CodeUri: ../../custom_resources/
       Handler: update_tenantstackmap_table.handler
       Runtime: python3.13
       Role: !GetAtt UpdateTenantStackMapTableLambdaExecutionRole.Arn

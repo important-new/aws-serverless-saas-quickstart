@@ -4,7 +4,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Serverless SaaS Reference Architecture 
+  Tenant API Gateway Module for Serverless SaaS
 
 Globals:
   Function:
@@ -26,335 +26,68 @@ Parameters:
     Type: String
     Default: "prod"
     Description: "Stage Name for the api"
-  LambdaReserveConcurrency:
-    Type: Number
-    Default: 0
-    Description: "Reserve concurrency for lambda function. You can customize this on per tenant basis, if needed, by storing in the tenant table"
+  ProductServiceStackName:
+    Type: String
+    Default: "product-service"
+    Description: "Product service stack name for importing function ARNs"
+  OrderServiceStackName:
+    Type: String
+    Default: "order-service"
+    Description: "Order service stack name for importing function ARNs"
+  # Product Service Function ARNs
+  GetProductFunctionArn:
+    Type: String
+    Description: "ARN of GetProduct function"
+  GetProductsFunctionArn:
+    Type: String
+    Description: "ARN of GetProducts function"
+  CreateProductFunctionArn:
+    Type: String
+    Description: "ARN of CreateProduct function"
+  UpdateProductFunctionArn:
+    Type: String
+    Description: "ARN of UpdateProduct function"
+  DeleteProductFunctionArn:
+    Type: String
+    Description: "ARN of DeleteProduct function"
+  # Order Service Function ARNs
+  GetOrderFunctionArn:
+    Type: String
+    Description: "ARN of GetOrder function"
+  GetOrdersFunctionArn:
+    Type: String
+    Description: "ARN of GetOrders function"
+  CreateOrderFunctionArn:
+    Type: String
+    Description: "ARN of CreateOrder function"
+  UpdateOrderFunctionArn:
+    Type: String
+    Description: "ARN of UpdateOrder function"
+  DeleteOrderFunctionArn:
+    Type: String
+    Description: "ARN of DeleteOrder function"
+
 Conditions:
   IsPooledDeploy: !Equals [ !Ref TenantIdParameter, pooled]
-  IsSiloDeploy: !Not [!Equals [ !Ref TenantIdParameter, pooled]]     
+
 Resources: 
   ServerlessSaaSLayers:
     Type: AWS::Serverless::LayerVersion
     Properties:
-      LayerName: !Join ['-', [serverless-saas-dependencies, !Ref TenantIdParameter]]
-      Description: Utilities for project
-      ContentUri: layers/
+      LayerName: !Join ['-', [serverless-saas-dependencies-api, !Ref TenantIdParameter]]
+      Description: Utilities for tenant API
+      ContentUri: ../../shared/layers/
       CompatibleRuntimes:
         - python3.13          
       LicenseInfo: 'MIT'
       RetentionPolicy: Retain      
     Metadata:
       BuildMethod: python3.13   
-  
-  ProductTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      AttributeDefinitions:
-        - AttributeName: tenant_id
-          AttributeType: S
-        - AttributeName: product_id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: tenant_id
-          KeyType: HASH
-        - AttributeName: product_id
-          KeyType: RANGE
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
-      TableName: !Join ['-', [Product, !Ref TenantIdParameter]]
-      Tags:
-        - Key: "TenantId"
-          Value: !Ref TenantIdParameter
-
-  OrderTable:
-    Type: AWS::DynamoDB::Table
-    Properties: 
-      AttributeDefinitions:
-        - AttributeName: tenant_id
-          AttributeType: S 
-        - AttributeName: order_id
-          AttributeType: S          
-      KeySchema:
-        - AttributeName: tenant_id
-          KeyType: HASH 
-        - AttributeName: order_id
-          KeyType: RANGE  
-      ProvisionedThroughput: 
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
-      TableName: !Join ['-', [Order, !Ref TenantIdParameter]]
-      Tags:
-        - Key: "TenantId"
-          Value: !Ref TenantIdParameter
-
-  ProductFunctionExecutionRolePolicy:
-    Condition: IsSiloDeploy
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Join ['-', [!Ref TenantIdParameter, product-function-policy]]
-      Roles: 
-        - !Ref ProductFunctionExecutionRole
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:              
-          - Effect: Allow
-            Action:
-              - dynamodb:GetItem
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-              - dynamodb:DeleteItem
-              - dynamodb:Query
-            Resource:
-              - !GetAtt ProductTable.Arn
-
-  ProductFunctionExecutionRole:
-    Type: AWS::IAM::Role     
-    Properties:
-      RoleName: !Join ['-', [!Ref TenantIdParameter, product-function-execution-role]]
-      Path: '/'
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      ManagedPolicyArns: 
-        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy    
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
-             
-  GetProductFunction:
-    Type: AWS::Serverless::Function 
-    DependsOn: ProductFunctionExecutionRole 
-    Properties:
-      CodeUri: ProductService/
-      Handler: product_service.get_product
-      Tracing: Active
-      Role: !GetAtt ProductFunctionExecutionRole.Arn
-      ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref LambdaReserveConcurrency]
-      Layers: 
-        - !Ref ServerlessSaaSLayers
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: "ProductService"
-          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
-          PRODUCT_TABLE_NAME: !Ref ProductTable      
-      Tags:
-        TenantId: !Ref TenantIdParameter
-
-  GetProductsFunction:
-    Type: AWS::Serverless::Function 
-    DependsOn: ProductFunctionExecutionRole 
-    Properties:
-      CodeUri: ProductService/
-      Handler: product_service.get_products
-      Tracing: Active
-      Role: !GetAtt ProductFunctionExecutionRole.Arn
-      ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref LambdaReserveConcurrency]
-      Layers: 
-        - !Ref ServerlessSaaSLayers
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: "ProductService"
-          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
-          PRODUCT_TABLE_NAME: !Ref ProductTable
-      Tags:
-        TenantId: !Ref TenantIdParameter
-
-  CreateProductFunction:
-    Type: AWS::Serverless::Function
-    DependsOn: ProductFunctionExecutionRole 
-    Properties:
-      CodeUri: ProductService/
-      Handler: product_service.create_product
-      Tracing: Active 
-      Role: !GetAtt ProductFunctionExecutionRole.Arn 
-      Layers: 
-        - !Ref ServerlessSaaSLayers
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: "ProductService"
-          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
-          PRODUCT_TABLE_NAME: !Ref ProductTable
-      Tags:
-        TenantId: !Ref TenantIdParameter
-
-  UpdateProductFunction:
-    Type: AWS::Serverless::Function
-    DependsOn: ProductFunctionExecutionRole 
-    Properties:
-      CodeUri: ProductService/
-      Handler: product_service.update_product
-      Tracing: Active
-      Role: !GetAtt ProductFunctionExecutionRole.Arn 
-      Layers: 
-        - !Ref ServerlessSaaSLayers
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: "ProductService"
-          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
-          PRODUCT_TABLE_NAME: !Ref ProductTable
-      Tags:
-        TenantId: !Ref TenantIdParameter
-
-  DeleteProductFunction:
-    Type: AWS::Serverless::Function
-    DependsOn: ProductFunctionExecutionRole 
-    Properties:
-      CodeUri: ProductService/
-      Handler: product_service.delete_product
-      Tracing: Active
-      Role: !GetAtt ProductFunctionExecutionRole.Arn 
-      Layers: 
-        - !Ref ServerlessSaaSLayers
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: "ProductService"
-          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
-          PRODUCT_TABLE_NAME: !Ref ProductTable
-      Tags:
-        TenantId: !Ref TenantIdParameter
-
-  OrderFunctionExecutionRolePolicy:
-    Condition: IsSiloDeploy
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Join ['-', [!Ref TenantIdParameter, order-function-policy]]
-      Roles: 
-        - !Ref OrderFunctionExecutionRole
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:              
-          - Effect: Allow
-            Action:
-              - dynamodb:GetItem
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-              - dynamodb:DeleteItem
-              - dynamodb:Query
-            Resource:
-              - !GetAtt OrderTable.Arn
-
-  OrderFunctionExecutionRole:
-    Type: AWS::IAM::Role     
-    Properties:
-      RoleName: !Join ['-', [!Ref TenantIdParameter, order-function-execution-role]]
-      Path: '/'
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      ManagedPolicyArns: 
-        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy    
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
-                
-  GetOrdersFunction:
-    Type: AWS::Serverless::Function 
-    DependsOn: OrderFunctionExecutionRole 
-    Properties:
-      CodeUri: OrderService/
-      Handler: order_service.get_orders
-      Tracing: Active
-      Role: !GetAtt OrderFunctionExecutionRole.Arn
-      ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref LambdaReserveConcurrency]
-      Layers: 
-        - !Ref ServerlessSaaSLayers
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: "OrderService"
-          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
-          ORDER_TABLE_NAME: !Ref OrderTable
-      Tags:
-        TenantId: !Ref TenantIdParameter
-
-  GetOrderFunction:
-    Type: AWS::Serverless::Function 
-    DependsOn: OrderFunctionExecutionRole 
-    Properties:
-      CodeUri: OrderService/
-      Handler: order_service.get_order
-      Tracing: Active
-      Role: !GetAtt OrderFunctionExecutionRole.Arn
-      ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref LambdaReserveConcurrency]
-      Layers: 
-        - !Ref ServerlessSaaSLayers
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: "OrderService"
-          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
-          ORDER_TABLE_NAME: !Ref OrderTable
-      Tags:
-        TenantId: !Ref TenantIdParameter
-
-  CreateOrderFunction:
-    Type: AWS::Serverless::Function
-    DependsOn: OrderFunctionExecutionRole 
-    Properties:
-      CodeUri: OrderService/
-      Handler: order_service.create_order
-      Tracing: Active 
-      Role: !GetAtt OrderFunctionExecutionRole.Arn 
-      Layers: 
-        - !Ref ServerlessSaaSLayers
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: "OrderService"
-          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
-          ORDER_TABLE_NAME: !Ref OrderTable
-      Tags:
-        TenantId: !Ref TenantIdParameter
-
-  UpdateOrderFunction:
-    Type: AWS::Serverless::Function
-    DependsOn: OrderFunctionExecutionRole 
-    Properties:
-      CodeUri: OrderService/
-      Handler: order_service.update_order
-      Tracing: Active
-      Role: !GetAtt OrderFunctionExecutionRole.Arn 
-      Layers: 
-        - !Ref ServerlessSaaSLayers
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: "OrderService"
-          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
-          ORDER_TABLE_NAME: !Ref OrderTable
-      Tags:
-        TenantId: !Ref TenantIdParameter
-
-  DeleteOrderFunction:
-    Type: AWS::Serverless::Function
-    DependsOn: OrderFunctionExecutionRole 
-    Properties:
-      CodeUri: OrderService/
-      Handler: order_service.delete_order
-      Tracing: Active
-      Role: !GetAtt OrderFunctionExecutionRole.Arn 
-      Layers: 
-        - !Ref ServerlessSaaSLayers
-      Environment:
-        Variables:
-          POWERTOOLS_SERVICE_NAME: "OrderService"
-          IS_POOLED_DEPLOY: !If [IsPooledDeploy, true, false]
-          ORDER_TABLE_NAME: !Ref OrderTable
-      Tags:
-        TenantId: !Ref TenantIdParameter
         
   BusinessServicesAuthorizerFunction:
     Type: AWS::Serverless::Function 
     Properties:
-      CodeUri: Resources/
+      CodeUri: ../../shared/resources/
       Handler: tenant_authorizer.lambda_handler
       Role: !ImportValue Serverless-SaaS-AuthorizerExecutionRoleArn
       MemorySize: 256
@@ -372,6 +105,7 @@ Resources:
     Properties:
       LogGroupName: !Join ['-', [/aws/api-gateway/access-logs-serverless-saas-tenant-api-, !Ref TenantIdParameter]]
       RetentionInDays: 30
+      
   ThrottlingLimitMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
@@ -383,6 +117,7 @@ Resources:
           MetricValue: "1"
           MetricNamespace: "Serverless-SaaS-Reference-Architecture"
           MetricName: !Join ['-', ["ThrottlingLimitExceeded", !Ref TenantIdParameter]]
+          
   ThrottlingLimitExceeded:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -394,6 +129,7 @@ Resources:
       Period: 60
       Statistic: SampleCount
       Threshold: 0 
+      
   ApiGatewayTenantApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -432,11 +168,9 @@ Resources:
                 - api_key: []      
                 - Authorizer: []
               x-amazon-apigateway-integration:
-                uri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    -  !GetAtt GetOrderFunction.Arn
-                    - /invocations
+                uri: !Sub 
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                  - FunctionArn: !Ref GetOrderFunctionArn
                 httpMethod: POST
                 type: aws_proxy 
             put:              
@@ -447,11 +181,9 @@ Resources:
                 - api_key: []   
                 - Authorizer: []
               x-amazon-apigateway-integration:
-                uri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    -  !GetAtt UpdateOrderFunction.Arn
-                    - /invocations
+                uri: !Sub 
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                  - FunctionArn: !Ref UpdateOrderFunctionArn
                 httpMethod: POST
                 type: aws_proxy     
             delete:
@@ -469,11 +201,9 @@ Resources:
                 - api_key: [] 
                 - Authorizer: []
               x-amazon-apigateway-integration:
-                uri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    -  !GetAtt DeleteOrderFunction.Arn
-                    - /invocations
+                uri: !Sub 
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                  - FunctionArn: !Ref DeleteOrderFunctionArn
                 httpMethod: POST
                 type: aws_proxy
             options:
@@ -516,11 +246,9 @@ Resources:
                 - api_key: []  
                 - Authorizer: []
               x-amazon-apigateway-integration:
-                uri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    -  !GetAtt GetOrdersFunction.Arn
-                    - /invocations
+                uri: !Sub 
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                  - FunctionArn: !Ref GetOrdersFunctionArn
                 httpMethod: POST
                 type: aws_proxy
             options:
@@ -561,11 +289,9 @@ Resources:
                 - api_key: []     
                 - Authorizer: []
               x-amazon-apigateway-integration:
-                uri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    -  !GetAtt CreateOrderFunction.Arn
-                    - /invocations
+                uri: !Sub 
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                  - FunctionArn: !Ref CreateOrderFunctionArn
                 httpMethod: POST
                 type: aws_proxy
             options:
@@ -613,11 +339,9 @@ Resources:
                 - api_key: []
                 - Authorizer: []
               x-amazon-apigateway-integration:
-                uri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    -  !GetAtt GetProductFunction.Arn
-                    - /invocations
+                uri: !Sub 
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                  - FunctionArn: !Ref GetProductFunctionArn
                 httpMethod: POST
                 type: aws_proxy 
             put:              
@@ -628,11 +352,9 @@ Resources:
                 - api_key: []
                 - Authorizer: []
               x-amazon-apigateway-integration:
-                uri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    -  !GetAtt UpdateProductFunction.Arn
-                    - /invocations
+                uri: !Sub 
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                  - FunctionArn: !Ref UpdateProductFunctionArn
                 httpMethod: POST
                 type: aws_proxy     
             delete:
@@ -650,11 +372,9 @@ Resources:
                 - api_key: []
                 - Authorizer: []
               x-amazon-apigateway-integration:
-                uri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    -  !GetAtt DeleteProductFunction.Arn
-                    - /invocations
+                uri: !Sub 
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                  - FunctionArn: !Ref DeleteProductFunctionArn
                 httpMethod: POST
                 type: aws_proxy 
             options:
@@ -697,11 +417,9 @@ Resources:
                 - api_key: []
                 - Authorizer: []
               x-amazon-apigateway-integration:
-                uri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    -  !GetAtt GetProductsFunction.Arn
-                    - /invocations
+                uri: !Sub 
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                  - FunctionArn: !Ref GetProductsFunctionArn
                 httpMethod: POST
                 type: aws_proxy  
             options:
@@ -742,11 +460,9 @@ Resources:
                 - api_key: []
                 - Authorizer: []
               x-amazon-apigateway-integration:
-                uri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    -  !GetAtt CreateProductFunction.Arn
-                    - /invocations
+                uri: !Sub 
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                  - FunctionArn: !Ref CreateProductFunctionArn
                 httpMethod: POST
                 type: aws_proxy   
             options:
@@ -786,20 +502,17 @@ Resources:
               in: "header"
               x-amazon-apigateway-authtype: "custom"
               x-amazon-apigateway-authorizer:
-                authorizerUri: !Join
-                  - ''
-                  - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                    - !GetAtt BusinessServicesAuthorizerFunction.Arn                      
-                    - /invocations
+                authorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BusinessServicesAuthorizerFunction.Arn}/invocations
                 authorizerResultTtlInSeconds: 30
                 type: "token"
       StageName: !Ref StageName
-  
+
+  # Lambda Permissions for API Gateway (matching original tenant-template.yaml names)
   GetProductsLambdaApiGatewayExecutionPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt GetProductsFunction.Arn
+      FunctionName: !Ref GetProductsFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Join [
         "", [
@@ -814,9 +527,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt 
-        - GetProductFunction
-        - Arn
+      FunctionName: !Ref GetProductFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Join [
         "", [
@@ -830,9 +541,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt 
-        - CreateProductFunction
-        - Arn
+      FunctionName: !Ref CreateProductFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Join [
         "", [
@@ -846,9 +555,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt 
-        - UpdateProductFunction
-        - Arn
+      FunctionName: !Ref UpdateProductFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Join [
         "", [
@@ -862,9 +569,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt 
-        - DeleteProductFunction
-        - Arn
+      FunctionName: !Ref DeleteProductFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Join [
         "", [
@@ -879,9 +584,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt 
-        - GetOrdersFunction
-        - Arn
+      FunctionName: !Ref GetOrdersFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Join [
         "", [
@@ -896,9 +599,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt 
-        - GetOrderFunction
-        - Arn
+      FunctionName: !Ref GetOrderFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Join [
         "", [
@@ -912,9 +613,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt 
-        - CreateOrderFunction
-        - Arn
+      FunctionName: !Ref CreateOrderFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Join [
         "", [
@@ -928,9 +627,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt 
-        - UpdateOrderFunction
-        - Arn
+      FunctionName: !Ref UpdateOrderFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Join [
         "", [
@@ -944,9 +641,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt 
-        - DeleteOrderFunction
-        - Arn
+      FunctionName: !Ref DeleteOrderFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Join [
         "", [
@@ -961,13 +656,13 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt BusinessServicesAuthorizerFunction.Arn     
+      FunctionName: !Ref BusinessServicesAuthorizerFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Join ["", ["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Ref ApiGatewayTenantApi, "/*/*" ]]
 
+  # Custom Resource to Associate Usage Plans with Tenant API
   UpdateUsagePlanLambdaExecutionRole:
     Type: AWS::IAM::Role
-    DependsOn: ApiGatewayTenantApi
     Properties:
       RoleName: !Join ['-', [!Ref TenantIdParameter, update-usage-plan-role]]
       Path: "/"
@@ -982,26 +677,13 @@ Resources:
               - sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
       Policies:
         - PolicyName: !Join ['-', [!Ref TenantIdParameter, update-usage-plan-policy]]
           PolicyDocument:
             Version: 2012-10-17
             Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:PutLogEvents
-                  - logs:CreateLogStream
-                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
-              - Effect: Allow
-                Action:
-                  - logs:DescribeLogStreams
-                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*
-              - Effect: Allow
-                Action:
-                  - xray:PutTraceSegments
-                  - xray:PutTelemetryRecords
-                Resource: "*"
               - Effect: Allow
                 Action:
                   - apigateway:PATCH
@@ -1010,18 +692,18 @@ Resources:
                 Action:
                   - dynamodb:GetItem
                 Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/ServerlessSaaS-Settings
+
   UpdateUsagePlanFunction:
     Type: AWS::Serverless::Function
-    DependsOn: UpdateUsagePlanLambdaExecutionRole
     Properties:
-      CodeUri: custom_resources/
+      CodeUri: ../../shared/custom_resources/
       Handler: update_usage_plan.handler
       Role: !GetAtt UpdateUsagePlanLambdaExecutionRole.Arn
       Layers: 
-          - !Ref ServerlessSaaSLayers
+        - !Ref ServerlessSaaSLayers
+
   AssociateUsagePlanWithTenantAPI:
     Type: Custom::AssociateUsagePlanWithTenantAPI
-    DependsOn: UpdateUsagePlanFunction
     Properties:
       ServiceToken: !GetAtt UpdateUsagePlanFunction.Arn
       ApiGatewayId: !Ref ApiGatewayTenantApi
@@ -1031,10 +713,11 @@ Resources:
       UsagePlanBasicTier: !ImportValue Serverless-SaaS-UsagePlanBasicTier
       UsagePlanStandardTier: !ImportValue Serverless-SaaS-UsagePlanStandardTier
       UsagePlanPremiumTier: !ImportValue Serverless-SaaS-UsagePlanPremiumTier
-      UsagePlanPlatinumTier: !ImportValue Serverless-SaaS-UsagePlanPlatinumTier    
+      UsagePlanPlatinumTier: !ImportValue Serverless-SaaS-UsagePlanPlatinumTier
+
+  # Custom Resource to Update API Gateway URL in Settings Table
   UpdateTenantApiGatewayUrlLambdaExecutionRole:
     Type: AWS::IAM::Role
-    DependsOn: ApiGatewayTenantApi
     Properties:
       RoleName: !Join ['-', [!Ref TenantIdParameter, apigwurl-lambda-exec-role]]
       Path: "/"
@@ -1064,29 +747,34 @@ Resources:
                 Action:
                   - dynamodb:UpdateItem
                 Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/ServerlessSaaS-TenantDetails    
+
   UpdateTenantApiGatewayUrlFunction:
     Type: AWS::Serverless::Function
-    DependsOn: UpdateTenantApiGatewayUrlLambdaExecutionRole
     Properties:
-      CodeUri: custom_resources/
+      CodeUri: ../../shared/custom_resources/
       Handler: update_tenant_apigatewayurl.handler
       Role: !GetAtt UpdateTenantApiGatewayUrlLambdaExecutionRole.Arn
       Layers: 
-          - !Ref ServerlessSaaSLayers
+        - !Ref ServerlessSaaSLayers
+
   UpdateTenantApiGatewayUrl:
     Type: Custom::UpdateTenantApiGatewayUrl
-    DependsOn: UpdateTenantApiGatewayUrlFunction
     Properties:
       ServiceToken: !GetAtt UpdateTenantApiGatewayUrlFunction.Arn
       TenantDetailsTableName: ServerlessSaaS-TenantDetails
       SettingsTableName: ServerlessSaaS-Settings  
       TenantId: !Ref TenantIdParameter  
-      TenantApiGatewayUrl: !Sub "https://${ApiGatewayTenantApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"    
-  
+      TenantApiGatewayUrl: !Sub "https://${ApiGatewayTenantApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/"
+
 Outputs:
+  TenantApiGatewayUrl:
+    Description: "Tenant API Gateway URL"
+    Value: !Sub "https://${ApiGatewayTenantApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}"
+    Export:
+      Name: !Sub "${AWS::StackName}-TenantApiGatewayUrl"
+      
   TenantApiGatewayId:
-    Description: Id for Tenant API Gateway
+    Description: "Tenant API Gateway ID"
     Value: !Ref ApiGatewayTenantApi
-  TenantAPI:
-    Description: "API Gateway endpoint URL for Tenant API"
-    Value: !Join ['', [!Sub "https://${ApiGatewayTenantApi}.execute-api.${AWS::Region}.amazonaws.com/", !Ref StageName]]
+    Export:
+      Name: !Sub "${AWS::StackName}-TenantApiGatewayId"

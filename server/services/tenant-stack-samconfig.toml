@@ -1,5 +1,9 @@
 version = 0.1
 [default]
+[default.build]
+[default.build.parameters]
+use_container = true
+
 [default.deploy]
 [default.deploy.parameters]
 stack_name = "stack-pooled"
@@ -7,4 +11,4 @@ resolve_s3 = true
 s3_prefix = "pooled-tenant"
 region = "us-east-1"
 confirm_changeset = false
-capabilities = "CAPABILITY_NAMED_IAM"
+capabilities = "CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND"
