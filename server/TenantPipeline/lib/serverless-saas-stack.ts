@@ -83,7 +83,7 @@ export class ServerlessSaaSStack extends cdk.Stack {
 
     //Declare a new CodeBuild project
     const buildProject = new codebuild.PipelineProject(this, 'Build', {
-      buildSpec: codebuild.BuildSpec.fromSourceFilename("server/tenant-buildspec.yml"),
+      buildSpec: codebuild.BuildSpec.fromSourceFilename("server/TenantPipeline/tenant-buildspec.yml"),
       environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_7_0 },
       environmentVariables: {
         'PACKAGE_BUCKET': {

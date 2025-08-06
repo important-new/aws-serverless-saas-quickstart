@@ -12,9 +12,9 @@ phases:
       - python -m pip install aws-sam-cli --upgrade
       - sam --version
       # Installing project dependencies
-      - cd server/ProductService
+      - cd server/services/product-service
       - python -m pip install -r requirements.txt 
-      - cd ../OrderService
+      - cd ../order-service
       - python -m pip install -r requirements.txt 
       
 
@@ -29,7 +29,7 @@ phases:
   build:
     commands:
       # Use Build phase to build your artifacts (compile, etc.)
-      - sam build -t tenant-template.yaml
+      - sam build -t tenant-stack-template.yaml
 
   post_build:
     commands:
@@ -40,4 +40,4 @@ artifacts:
   discard-paths: yes
   files:
     # List of local artifacts that will be passed down the pipeline
-    - server/packaged.yaml
+    - server/services/packaged.yaml
