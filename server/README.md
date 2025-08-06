@@ -25,7 +25,7 @@ server/
 │   └── tenant-stack-template.yaml  # Main nested stack orchestrator
 ├── shared/                     # Shared Infrastructure Components
 │   ├── infrastructure/        # Core infrastructure services
-│   │   ├── tenant-management/ # Tenant management Lambda functions
+│   ├── tenant-management/     # Tenant management Lambda functions
 │   │   ├── nested_templates/  # Reusable CloudFormation templates
 │   │   ├── template.yaml      # Shared infrastructure template
 │   │   └── samconfig.toml     # Shared infrastructure config
