@@ -1,4 +1,4 @@
-aws-lambda-powertools[Tracer,Logger,Metrics]
+aws-lambda-powertools[tracer]
 simplejson
 jsonpickle
 aws_requests_auth

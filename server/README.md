@@ -30,7 +30,7 @@ server/
 │   └── samconfig.toml         # Shared infrastructure config
 │   ├── custom_resources/      # Custom CloudFormation resources
 │   ├── layers/               # Lambda layers for shared utilities
-│   └── resources/            # Shared Lambda functions (authorizers, etc.)
+│   └── auth/                 # Shared Lambda functions (authorizers, etc.)
 ├── scripts/                   # Deployment and utility scripts
 │   ├── deploy-all-services.sh    # Deploy all services
 │   ├── deploy-service.sh          # Deploy individual service
