@@ -29,7 +29,7 @@ phases:
   build:
     commands:
       # Use Build phase to build your artifacts (compile, etc.)
-      - sam build -t tenant-stack-template.yaml
+      - sam build -t template.yaml
 
   post_build:
     commands:
