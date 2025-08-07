@@ -10,8 +10,9 @@ if [[ $? -ne 0 ]]; then
 fi
 
 REGION=$(aws configure get region)
-sam build -t shared-template.yaml --use-container --cached 
-sam deploy --config-file shared-samconfig.toml --region=$REGION
+cd server/shared
+sam build -t template.yaml --use-container --cached 
+sam deploy --config-file samconfig.toml --region=$REGION
 
     
 echo "Pooled tenant server code is getting deployed"
