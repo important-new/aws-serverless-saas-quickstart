@@ -24,11 +24,10 @@ server/
 │   │   └── samconfig.toml     # Deployment configuration
 │   └── tenant-stack-template.yaml  # Main nested stack orchestrator
 ├── shared/                     # Shared Infrastructure Components
-│   ├── infrastructure/        # Core infrastructure services
 │   ├── tenant-management/     # Tenant management Lambda functions
-│   │   ├── nested_templates/  # Reusable CloudFormation templates
-│   │   ├── template.yaml      # Shared infrastructure template
-│   │   └── samconfig.toml     # Shared infrastructure config
+│   ├── nested_templates/      # Reusable CloudFormation templates
+│   ├── template.yaml          # Shared infrastructure template
+│   └── samconfig.toml         # Shared infrastructure config
 │   ├── custom_resources/      # Custom CloudFormation resources
 │   ├── layers/               # Lambda layers for shared utilities
 │   └── resources/            # Shared Lambda functions (authorizers, etc.)
@@ -53,7 +52,7 @@ server/
 
 1. **Deploy Shared Infrastructure First**
    ```bash
-   cd server/shared/infrastructure
+   cd server/shared
    sam build --use-container
    sam deploy --config-file samconfig.toml
    ```
