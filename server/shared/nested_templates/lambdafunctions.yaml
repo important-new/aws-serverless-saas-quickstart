@@ -130,7 +130,7 @@ Resources:
     Type: AWS::Serverless::Function 
     DependsOn: AuthorizerAccessRole
     Properties:
-      CodeUri: ../resources/
+      CodeUri: ../auth/
       Handler: shared_service_authorizer.lambda_handler
       Runtime: python3.13
       Role: !GetAtt AuthorizerExecutionRole.Arn
