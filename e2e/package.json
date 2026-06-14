@@ -1,0 +1,11 @@
+{
+  "name": "frontend-e2e",
+  "private": true,
+  "description": "Cross-platform Playwright smoke tests for the three Angular apps",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
