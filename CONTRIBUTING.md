@@ -113,7 +113,7 @@ your contributions are licensed under the same terms.
 ### 运行测试
 
 项目提供跨平台测试套件（Windows / macOS / Linux），详见
-[`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md)：
+[`docs/zh-CN/LOCAL_TESTING.md`](docs/zh-CN/LOCAL_TESTING.md)：
 
 ```bash
 # 后端 —— pytest + moto（内存模拟 DynamoDB，无需 Docker / AWS）
@@ -151,7 +151,7 @@ CI 在每次 Pull Request 时运行二者，见 [`.github/workflows/`](.github/w
 - **Angular/TypeScript**：遵循现有 standalone 组件 + Material M3 模式，不要重新
   引入已废弃的包（如 `@angular/flex-layout`）。
 - **不提交敏感信息**：切勿提交 Cognito 池/客户端 ID、API URL、邮箱、密码或 AWS
-  账号 ID。使用占位符并在 [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) 中说明。
+  账号 ID。使用占位符并在 [`docs/zh-CN/CONFIGURATION.md`](docs/zh-CN/CONFIGURATION.md) 中说明。
 
 ### 贡献的许可
 

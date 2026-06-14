@@ -138,7 +138,7 @@ This project is distributed under the terms in [LICENSE](LICENSE).
 - **切勿将硬编码的凭据**（密码、API 密钥、令牌）提交到仓库。请使用环境变量、参数存储或
   密钥管理服务。
 - 已知的依赖安全公告及其修复方案记录在
-  [docs/DEPENDENCY_AUDIT.md](docs/DEPENDENCY_AUDIT.md) 中。例如，为避免 CVE-2024-33663
+  [docs/zh-CN/DEPENDENCY_AUDIT.md](docs/zh-CN/DEPENDENCY_AUDIT.md) 中。例如，为避免 CVE-2024-33663
   与 CVE-2024-33664，从无人维护的 `python-jose` 迁移到 `PyJWT[crypto]` 的过程便记录于此。
 
 本项目依据 [LICENSE](LICENSE) 中的条款进行分发。

@@ -1,86 +1,90 @@
-# 依赖与运行时支持状态审计
+# Dependency & Runtime Support Status Audit
 
-> 审计日期：2026-06-14　｜　对照"当前社区维护 / AWS 官方支持"状态
+[**English**](DEPENDENCY_AUDIT.md) ｜ [中文](zh-CN/DEPENDENCY_AUDIT.md)
 
-## 总体结论
+[← Back to README](../README.md)
 
-- **后端 / 基础设施**：运行时选型健康，当前受支持。
-- **前端**：Angular / Amplify 技术栈整体已 **EOL（生命周期结束）**，停留在 2022 年版本。
-- **最高优先安全项**：`python-jose` 已弃维且存在活跃 CVE，需替换。
+> Audit date: 2026-06-14　｜　Assessed against "current community maintenance / official AWS support" status
 
----
+## Overall Conclusion
 
-## 1. 后端 / 基础设施（✅ 大体良好）
-
-| 组件 | 代码中版本 | 状态 | 说明 |
-|---|---|---|---|
-| Lambda runtime | `python3.13` | ✅ 当前受支持 | AWS 支持至约 2029-10；最新已是 3.14（2025-11），3.13 为稳妥 LTS |
-| CodeBuild 镜像 | `STANDARD_7_0` + `python:3.13` | ✅ 可用 | Python 3.13 自 2025-03 起内置于 standard:7.0 |
-| `aws-cdk-lib` | `^2.0.0` | ✅ 受支持 | CDK v2 在维护（v1 已 2023-06 EOL）。floor 偏低，建议核对 lockfile 解析到最新 2.x |
-| `constructs` | `^10.0.0` | ✅ | 与 CDK v2 匹配 |
-| `aws-lambda-powertools` `jsonpickle` `simplejson` `requests` `pytest-mock` | 未锁版本 | ✅ 维护中 | — |
-
-## 2. 后端需要注意（⚠️ / ❌）
-
-| 项 | 状态 | 影响位置 | 处置 |
-|---|---|---|---|
-| **`python-jose[cryptography]`** | ❌ 弃维 + CVE | `services/tenant-api`、`shared/auth`、`shared/layers` | **迁移到 `PyJWT`**。涉及 JWT 校验（安全敏感路径）。相关 CVE：CVE-2024-33663（算法混淆）、CVE-2024-33664（JWE DoS） |
-| **Python 依赖未锁版本** | ⚠️ 可复现性/供应链风险 | 全部 `requirements.txt` | 固定大版本或引入 lock（pip-tools） |
-| `crhelper` / `aws_requests_auth` | ⚠️ 低活跃 | `shared/custom_resources`、多处 | 仍可用，留意 |
-| `@types/node` | ⚠️ `10.17.27`（Node 10 已 2021 EOL） | `TenantPipeline` | 升级到与构建 Node 对应的 `@types/node`（仅类型，运行时无影响） |
-
-## 3. 前端（❌ 整体 EOL）
-
-| 组件 | 代码中版本 | 状态 | 当前/目标 |
-|---|---|---|---|
-| `@angular/core` / `@angular/cli` | `~14.0.0` / `~14.0.5` | ❌ EOL（约 2023 年底） | 在维护：20（至 2026-11）/ 21（至 2027-05）/ 22 |
-| `aws-amplify` | `~4.3.27` | ❌ EOL | 仅 v5/v6 受支持 |
-| `@aws-amplify/ui-angular` | `~2.4.14` | ❌ 远古 | 最新 5.3.5，要求 Angular ≥ 19 |
-| `typescript` | `~4.7.2` | ⚠️ 旧（被 Angular 14 锁定） | 5.x |
-| `rxjs` / `zone.js` | `7.5` / `0.11.4` | ⚠️ 旧（随 Angular 14 绑定） | — |
-
-> 前端为互锁技术栈：Angular 14 ↔ Amplify v4 ↔ ui-angular 2.x ↔ TS 4.7。
-> 现代化需整体跃迁：Angular `14→20/21`、aws-amplify `v4→v6`、ui-angular `2.x→5.x`
-> （ui-angular 5.x 需 Angular 19+）。其中 **Amplify v4→v6 的 Auth API 为破坏性重写**，工作量最大，应作为独立迁移项目并配合构建/E2E 验证。
+- **Backend / infrastructure**: Runtime choices are healthy and currently supported.
+- **Frontend**: The Angular / Amplify stack is **EOL (end of life)** overall, frozen at 2022 versions.
+- **Highest-priority security item**: `python-jose` is unmaintained and has active CVEs; it must be replaced.
 
 ---
 
-## 4. 处置优先级
+## 1. Backend / Infrastructure (✅ Largely Healthy)
 
-| 级别 | 事项 | 风险/工作量 |
+| Component | Version in code | Status | Notes |
+|---|---|---|---|
+| Lambda runtime | `python3.13` | ✅ Currently supported | AWS support through ~2029-10; the latest is already 3.14 (2025-11), 3.13 is a safe LTS choice |
+| CodeBuild image | `STANDARD_7_0` + `python:3.13` | ✅ Available | Python 3.13 has been bundled in standard:7.0 since 2025-03 |
+| `aws-cdk-lib` | `^2.0.0` | ✅ Supported | CDK v2 is maintained (v1 reached EOL 2023-06). Floor is low; recommend verifying the lockfile resolves to the latest 2.x |
+| `constructs` | `^10.0.0` | ✅ | Matches CDK v2 |
+| `aws-lambda-powertools` `jsonpickle` `simplejson` `requests` `pytest-mock` | Unpinned | ✅ Maintained | — |
+
+## 2. Backend Items to Watch (⚠️ / ❌)
+
+| Item | Status | Affected locations | Disposition |
+|---|---|---|---|
+| **`python-jose[cryptography]`** | ❌ Unmaintained + CVE | `services/tenant-api`, `shared/auth`, `shared/layers` | **Migrate to `PyJWT`**. Involves JWT verification (security-sensitive path). Related CVEs: CVE-2024-33663 (algorithm confusion), CVE-2024-33664 (JWE DoS) |
+| **Unpinned Python dependencies** | ⚠️ Reproducibility / supply-chain risk | All `requirements.txt` | Pin major versions or introduce a lock (pip-tools) |
+| `crhelper` / `aws_requests_auth` | ⚠️ Low activity | `shared/custom_resources`, multiple places | Still usable, keep an eye on it |
+| `@types/node` | ⚠️ `10.17.27` (Node 10 reached EOL 2021) | `TenantPipeline` | Upgrade to a `@types/node` matching the build Node (types only, no runtime impact) |
+
+## 3. Frontend (❌ EOL Overall)
+
+| Component | Version in code | Status | Current / target |
+|---|---|---|---|
+| `@angular/core` / `@angular/cli` | `~14.0.0` / `~14.0.5` | ❌ EOL (~end of 2023) | Maintained: 20 (through 2026-11) / 21 (through 2027-05) / 22 |
+| `aws-amplify` | `~4.3.27` | ❌ EOL | Only v5/v6 are supported |
+| `@aws-amplify/ui-angular` | `~2.4.14` | ❌ Ancient | Latest 5.3.5, requires Angular ≥ 19 |
+| `typescript` | `~4.7.2` | ⚠️ Old (pinned by Angular 14) | 5.x |
+| `rxjs` / `zone.js` | `7.5` / `0.11.4` | ⚠️ Old (bound to Angular 14) | — |
+
+> The frontend is an interlocked stack: Angular 14 ↔ Amplify v4 ↔ ui-angular 2.x ↔ TS 4.7.
+> Modernization requires a coordinated jump across the board: Angular `14→20/21`, aws-amplify `v4→v6`, ui-angular `2.x→5.x`
+> (ui-angular 5.x requires Angular 19+). Among these, the **Amplify v4→v6 Auth API is a breaking rewrite** with the largest workload, and should be treated as a standalone migration project with build/E2E verification.
+
+---
+
+## 4. Disposition Priority
+
+| Level | Item | Risk / effort |
 |---|---|---|
-| 🔴 P0（安全） | `python-jose` → `PyJWT` | 中，需改 JWT 校验代码并测试 |
-| 🟠 P1（可复现） | Python 依赖锁定版本 | 低 |
-| 🟢 P2（杂项） | `@types/node` 升级、CDK lockfile 核对 | 低 |
-| 🟡 P3（大工程） | 前端 Angular 20/21 + Amplify v6 + ui-angular 5.x 整体升级 | 高，破坏性，需单独立项 |
+| 🔴 P0 (security) | `python-jose` → `PyJWT` | Medium; requires changing JWT verification code and testing |
+| 🟠 P1 (reproducibility) | Pin Python dependency versions | Low |
+| 🟢 P2 (misc) | `@types/node` upgrade, CDK lockfile verification | Low |
+| 🟡 P3 (large effort) | Frontend overall upgrade to Angular 20/21 + Amplify v6 + ui-angular 5.x | High, breaking, requires a dedicated project |
 
-## 4.1 处置进度（2026-06-14，分支 `chore/dependency-modernization`）
+## 4.1 Disposition Progress (2026-06-14, branch `chore/dependency-modernization`)
 
-| 级别 | 状态 | 说明 |
+| Level | Status | Notes |
 |---|---|---|
-| 🔴 P0 | ✅ 完成 | `python-jose` → `PyJWT[crypto]`，重写两个 authorizer 验签；6 用例单元验证通过 |
-| 🟠 P1 | ✅ 完成 | 全部 `requirements.txt` 锁版本（兼容区间锁大版本） |
-| 🟢 P2 | ✅ 完成 | `@types/node`→`^20`、`aws-cdk-lib`→`^2.258` 并刷新 lockfile；修 `\*` 转义 |
-| 🟡 P3 | ✅ 完成（构建层） | **三个前端应用全部 Angular 14 → 20**；Admin/Application 同时 **Amplify v4 → v6**、ui-angular 2→5；移除已废弃的 `@angular/flex-layout`；生产构建均通过 |
+| 🔴 P0 | ✅ Done | `python-jose` → `PyJWT[crypto]`, rewrote signature verification in two authorizers; 6 unit test cases passing |
+| 🟠 P1 | ✅ Done | Pinned all `requirements.txt` versions (compatible-range pinning at the major version) |
+| 🟢 P2 | ✅ Done | `@types/node`→`^20`, `aws-cdk-lib`→`^2.258` and refreshed lockfile; fixed `\*` escaping |
+| 🟡 P3 | ✅ Done (build layer) | **All three frontend apps Angular 14 → 20**; Admin/Application also **Amplify v4 → v6**, ui-angular 2→5; removed the deprecated `@angular/flex-layout`; production builds all pass |
 
-### 前端迁移要点
-- 统一各 `@angular/*` 至 `^20`、TypeScript `5.8`、zone.js `0.15`、rxjs `7.8`。
-- Material：移除已删的 `legacy-*` 导入；主题改用 M3 `mat.theme()`（indigo→violet、pink→rose，视觉相近）。
-- Angular 19 起组件默认 standalone：给 NgModule 声明的组件补 `standalone: false`。
-- Amplify v6：`Auth.currentSession()`→`fetchAuthSession()`、`getJwtToken()`→`token.toString()`、`isValid()`→`!!tokens?.idToken`、`Auth.signOut()`→`signOut()`；`Amplify.configure(aws_exports)` 旧格式 v6 仍兼容。
-- SCSS 去除 webpack `~` 前缀；ui-angular 5 的 `theme.css` 经 angular.json `styles` 引入（其 exports 字段不暴露该子路径）。
+### Frontend Migration Notes
+- Unified all `@angular/*` to `^20`, TypeScript `5.8`, zone.js `0.15`, rxjs `7.8`.
+- Material: removed deleted `legacy-*` imports; switched theming to M3 `mat.theme()` (indigo→violet, pink→rose, visually similar).
+- Since Angular 19, components are standalone by default: added `standalone: false` to components declared in NgModules.
+- Amplify v6: `Auth.currentSession()`→`fetchAuthSession()`, `getJwtToken()`→`token.toString()`, `isValid()`→`!!tokens?.idToken`, `Auth.signOut()`→`signOut()`; the legacy `Amplify.configure(aws_exports)` format is still compatible in v6.
+- SCSS: removed the webpack `~` prefix; ui-angular 5's `theme.css` is imported via the `styles` array in angular.json (its exports field does not expose that subpath).
 
-### ⚠️ 尚未验证（需运行时确认）
-- 生产构建通过 ≠ 运行时通过。**Amplify v6 的登录/会话/登出流程需在浏览器实测**（`npm start` + 真实 Cognito 登录）。
-- 后端 PyJWT 为独立单元验证，**未在已部署的 Lambda 中集成测试**。
-- Material 主题色由 indigo 变为 violet（如需精确品牌色需自定义 M3 调色板）。
+### ⚠️ Not Yet Verified (requires runtime confirmation)
+- A passing production build ≠ passing at runtime. **The Amplify v6 sign-in/session/sign-out flow needs real-browser testing** (`npm start` + a real Cognito login).
+- The backend PyJWT change was verified by standalone unit tests, **not integration-tested in a deployed Lambda**.
+- The Material theme color changed from indigo to violet (a custom M3 palette is needed for exact brand colors).
 
-## 5. 信息来源
+## 5. Sources
 
-- AWS Lambda runtimes：<https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html>
-- Lambda 增加 Python 3.13：<https://aws.amazon.com/about-aws/whats-new/2024/11/aws-lambda-support-python-313/>
-- CodeBuild 增加 Python 3.13（standard:7.0）：<https://aws.amazon.com/about-aws/whats-new/2025/03/aws-codebuild-node-22-python-3-13-go-1-23>
-- python-jose CVE-2024-33663：<https://www.vicarius.io/vsociety/posts/algorithm-confusion-in-python-jose-cve-2024-33663>
-- PyJWT 迁移指引：<https://github.com/jpadilla/pyjwt/issues/942>
-- Angular 版本与 EOL：<https://www.herodevs.com/blog-posts/angular-version-history-every-release-date-support-window-and-end-of-life-date-from-angularjs-to-angular-22>
-- @aws-amplify/ui-angular（npm registry）：<https://registry.npmjs.org/@aws-amplify/ui-angular/latest>
+- AWS Lambda runtimes: <https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html>
+- Lambda adds Python 3.13: <https://aws.amazon.com/about-aws/whats-new/2024/11/aws-lambda-support-python-313/>
+- CodeBuild adds Python 3.13 (standard:7.0): <https://aws.amazon.com/about-aws/whats-new/2025/03/aws-codebuild-node-22-python-3-13-go-1-23>
+- python-jose CVE-2024-33663: <https://www.vicarius.io/vsociety/posts/algorithm-confusion-in-python-jose-cve-2024-33663>
+- PyJWT migration guidance: <https://github.com/jpadilla/pyjwt/issues/942>
+- Angular versions and EOL: <https://www.herodevs.com/blog-posts/angular-version-history-every-release-date-support-window-and-end-of-life-date-from-angularjs-to-angular-22>
+- @aws-amplify/ui-angular (npm registry): <https://registry.npmjs.org/@aws-amplify/ui-angular/latest>

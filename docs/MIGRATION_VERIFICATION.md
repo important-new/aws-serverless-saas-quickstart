@@ -1,68 +1,74 @@
-# 前端迁移运行时验证清单（Angular 20 + Amplify v6）
+# Frontend Migration Runtime Verification Checklist (Angular 20 + Amplify v6)
 
-> 适用分支：`chore/dependency-modernization`
-> 目的：生产构建已通过，但**构建通过 ≠ 运行时通过**。本清单用于在浏览器中
-> 实测三个应用的认证流程（Amplify v6 的登录/会话/登出）。
+[**English**](MIGRATION_VERIFICATION.md) ｜ [中文](zh-CN/MIGRATION_VERIFICATION.md)
 
-## 0. 前置条件
+[← Back to README](../README.md)
 
-- Node ≥ 20（本仓库迁移在 Node 22 上完成）。
-- 各应用 `node_modules` 已安装（迁移过程中已 `npm install`）。
-- **有效的后端配置**：登录需要真实的 Cognito 用户池与已部署的 API。
-  - `Admin`：读取 `client/Admin/src/aws-exports.ts`（静态 Cognito 配置）。
-  - `Application`：通过 `…/tenant/init/<tenant>` 动态获取每租户配置，URL 需带租户名。
-  - `Landing`：仅注册表单，调用 `environment.regApiGatewayUrl`。
+> Applies to branch: `chore/dependency-modernization`
+> Purpose: the production build already passes, but **a passing build ≠ a passing
+> runtime**. This checklist is for actually testing the authentication flows of
+> the three apps in the browser (Amplify v6 sign-in / session / sign-out).
 
-## 1. 启动（任选其一）
+## 0. Prerequisites
+
+- Node ≥ 20 (the migration in this repo was done on Node 22).
+- Each app's `node_modules` is installed (`npm install` was run during the migration).
+- **Valid backend configuration**: sign-in requires a real Cognito user pool and a deployed API.
+  - `Admin`: reads `client/Admin/src/aws-exports.ts` (static Cognito config).
+  - `Application`: dynamically fetches per-tenant config via `…/tenant/init/<tenant>`; the URL must include the tenant name.
+  - `Landing`: registration form only, calls `environment.regApiGatewayUrl`.
+
+## 1. Start up (pick either option)
 
 ```bash
-# 便捷脚本：三个应用分别在 4200/4201/4202 启动
+# Convenience script: starts the three apps on 4200/4201/4202 respectively
 bash scripts/serve-clients.sh
 
-# 或手动单独启动
+# Or start each one manually
 cd client/Landing      && npx ng serve --port 4200
 cd client/Application  && npx ng serve --port 4201
 cd client/Admin        && npx ng serve --port 4202
 ```
 
-## 2. 逐应用验证清单
+## 2. Per-app verification checklist
 
-### 2.1 Landing（无认证，最先验证）
-- [ ] 打开 `http://localhost:4200`，页面正常渲染（无白屏）。
-- [ ] 浏览器 Console **无报错**（尤其无 Angular/zone.js 启动错误）。
-- [ ] 填写注册表单并提交 → 网络面板可见对 `regApiGatewayUrl` 的请求。
-- [ ] Material 控件（输入框/按钮/snackbar）样式正常（主题色现为 violet）。
+### 2.1 Landing (no auth, verify first)
+- [ ] Open `http://localhost:4200`; the page renders correctly (no blank screen).
+- [ ] Browser Console has **no errors** (especially no Angular/zone.js startup errors).
+- [ ] Fill out and submit the registration form → the Network panel shows a request to `regApiGatewayUrl`.
+- [ ] Material controls (inputs/buttons/snackbar) are styled correctly (the theme color is now violet).
 
-### 2.2 Admin（静态 Cognito 登录）
-- [ ] 打开 `http://localhost:4202`，**Amplify Authenticator 登录界面正常渲染**
-      —— 这验证了 Amplify v6 `Amplify.configure(aws_exports)` 运行时成功。
-- [ ] Console 无 `Amplify has not been configured` 或模块解析类报错。
-- [ ] 用管理员账号登录 → 成功进入后台（不再回到登录页）。
-- [ ] 进入“租户/用户”页 → 网络请求头含 `Authorization: Bearer <idToken>`
-      —— 验证 `auth.interceptor.ts` 的 `fetchAuthSession()` 取 token 正常。
-- [ ] 顶部显示用户名（验证 `nav.component` 读取 `idToken.payload`）。
-- [ ] 点击登出 → 回到登录页（验证 `signOut({ global: true })`）。
+### 2.2 Admin (static Cognito sign-in)
+- [ ] Open `http://localhost:4202`; the **Amplify Authenticator sign-in screen renders correctly**
+      —— this verifies that Amplify v6 `Amplify.configure(aws_exports)` succeeds at runtime.
+- [ ] Console has no `Amplify has not been configured` or module-resolution errors.
+- [ ] Sign in with an admin account → successfully enter the backoffice (no longer bounced back to the sign-in page).
+- [ ] Go to the "Tenants/Users" page → network request headers include `Authorization: Bearer <idToken>`
+      —— verifies that `auth.interceptor.ts`'s `fetchAuthSession()` retrieves the token correctly.
+- [ ] The username is shown at the top (verifies `nav.component` reads `idToken.payload`).
+- [ ] Click sign out → return to the sign-in page (verifies `signOut({ global: true })`).
 
-### 2.3 Application（动态每租户登录）
-- [ ] 以带租户的入口打开，例如 `http://localhost:4201/<tenantName>` 或应用约定的
-      注册后跳转路径（触发 `auth-configuration.service` 的 `configureAmplifyAuth()`）。
-- [ ] Authenticator 登录界面正常渲染（验证动态 `Amplify.configure(awsmobile)`）。
-- [ ] 租户用户登录成功 → 进入 dashboard。
-- [ ] `CognitoGuard` 行为：未登录访问受保护路由 → 跳 `/unauthorized`。
-- [ ] orders / products 列表能加载（请求头含 Bearer token）。
-- [ ] 登出正常。
+### 2.3 Application (dynamic per-tenant sign-in)
+- [ ] Open via a tenant-aware entry point, e.g. `http://localhost:4201/<tenantName>` or the
+      post-registration redirect path defined by the app (triggers `auth-configuration.service`'s `configureAmplifyAuth()`).
+- [ ] The Authenticator sign-in screen renders correctly (verifies dynamic `Amplify.configure(awsmobile)`).
+- [ ] A tenant user signs in successfully → enters the dashboard.
+- [ ] `CognitoGuard` behavior: accessing a protected route while signed out → redirect to `/unauthorized`.
+- [ ] The orders / products lists load (request headers include the Bearer token).
+- [ ] Sign out works correctly.
 
-## 3. Amplify v6 重点观察项（出问题时优先看这些）
+## 3. Amplify v6 key things to watch (check these first when something breaks)
 
-| 现象 | 可能原因 | 位置 |
+| Symptom | Possible cause | Location |
 |---|---|---|
-| 登录页空白 / `Amplify has not been configured` | `Amplify.configure` 未在 bootstrap 前执行或配置格式不被接受 | `main.ts` / `auth-configuration.service.ts` |
-| 请求缺少 `Authorization` 头 | `fetchAuthSession()` 返回的 `tokens?.idToken` 为空 | `auth.interceptor.ts` |
-| 登录后仍判定未认证 | `!!tokens?.idToken` 判定逻辑 | `nav.component.ts` / `cognito.guard.ts` |
-| 用户名/公司名空白 | `idToken.payload['custom:...']` 字段名 | `nav.component.ts` |
-| 登出无效 | `signOut({ global: true })` | `*/auth.component.ts`、`nav.component.ts` |
+| Blank sign-in page / `Amplify has not been configured` | `Amplify.configure` not run before bootstrap, or the config format is not accepted | `main.ts` / `auth-configuration.service.ts` |
+| Request missing the `Authorization` header | `tokens?.idToken` returned by `fetchAuthSession()` is empty | `auth.interceptor.ts` |
+| Still considered unauthenticated after sign-in | `!!tokens?.idToken` check logic | `nav.component.ts` / `cognito.guard.ts` |
+| Username/company name blank | `idToken.payload['custom:...']` field name | `nav.component.ts` |
+| Sign-out has no effect | `signOut({ global: true })` | `*/auth.component.ts`, `nav.component.ts` |
 
-## 4. 通过标准
+## 4. Pass criteria
 
-三个应用均：可启动、登录页渲染、能登录、受保护请求带 token、可登出，且
-Console 无致命报错 → 视为运行时验证通过，可合并分支。
+All three apps: can start up, render the sign-in page, can sign in, send the token
+on protected requests, and can sign out, with no fatal Console errors → considered
+to have passed runtime verification, and the branch may be merged.
