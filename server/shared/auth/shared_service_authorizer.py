@@ -6,10 +6,10 @@ import json
 import os
 import urllib.request
 import boto3
-import time
 import logger
-from jose import jwk, jwt
-from jose.utils import base64url_decode
+import jwt
+from jwt.algorithms import RSAAlgorithm
+from jwt import InvalidTokenError
 import auth_manager
 import utils
 
@@ -31,7 +31,7 @@ def lambda_handler(event, context):
     logger.info("Method ARN: " + event['methodArn'])
     
     #only to get tenant id to get user pool info
-    unauthorized_claims = jwt.get_unverified_claims(jwt_bearer_token)
+    unauthorized_claims = jwt.decode(jwt_bearer_token, options={"verify_signature": False})
     logger.info(unauthorized_claims)
 
     if(auth_manager.isSaaSProvider(unauthorized_claims['custom:userRole'])):
@@ -132,39 +132,32 @@ def lambda_handler(event, context):
 
 def validateJWT(token, app_client_id, keys):
     # get the kid from the headers prior to verification
-    headers = jwt.get_unverified_headers(token)
-    kid = headers['kid']
+    try:
+        headers = jwt.get_unverified_header(token)
+    except InvalidTokenError:
+        logger.info('Unable to read token headers')
+        return False
+    kid = headers.get('kid')
     # search for the kid in the downloaded public keys
-    key_index = -1
-    for i in range(len(keys)):
-        if kid == keys[i]['kid']:
-            key_index = i
-            break
-    if key_index == -1:
+    jwk_key = next((k for k in keys if k.get('kid') == kid), None)
+    if jwk_key is None:
         logger.info('Public key not found in jwks.json')
         return False
-    # construct the public key
-    public_key = jwk.construct(keys[key_index])
-    # get the last two sections of the token,
-    # message and signature (encoded in base64)
-    message, encoded_signature = str(token).rsplit('.', 1)
-    # decode the signature
-    decoded_signature = base64url_decode(encoded_signature.encode('utf-8'))
-    # verify the signature
-    if not public_key.verify(message.encode("utf8"), decoded_signature):
-        logger.info('Signature verification failed')
-        return False
-    logger.info('Signature successfully verified')
-    # since we passed the verification, we can now safely
-    # use the unverified claims
-    claims = jwt.get_unverified_claims(token)
-    # additionally we can verify the token expiration
-    if time.time() > claims['exp']:
-        logger.info('Token is expired')
-        return False
-    # and the Audience  (use claims['client_id'] if verifying an access token)
-    if claims['aud'] != app_client_id:
-        logger.info('Token was not issued for this audience')
+    # construct the public key from the matching JWK
+    public_key = RSAAlgorithm.from_jwk(json.dumps(jwk_key))
+    # verify the signature, expiration and audience in a single step.
+    # jwt.decode validates the RS256 signature, checks 'exp' by default and
+    # the audience via the 'audience' argument (use the 'client_id' claim
+    # instead if you are validating a Cognito access token).
+    try:
+        claims = jwt.decode(
+            token,
+            public_key,
+            algorithms=['RS256'],
+            audience=app_client_id,
+        )
+    except InvalidTokenError as e:
+        logger.info('Token validation failed: %s' % str(e))
         return False
     # now we can use the claims
     logger.info(claims)
@@ -188,7 +181,7 @@ class AuthPolicy(object):
     """The principal used for the policy, this should be a unique identifier for the end user."""
     version = "2012-10-17"
     """The policy version used for the evaluation. This should always be '2012-10-17'"""
-    pathRegex = "^[/.a-zA-Z0-9-\*]+$"
+    pathRegex = r"^[/.a-zA-Z0-9-\*]+$"
     """The regular expression used to validate resource paths for the policy"""
 
     """these are the internal lists of allowed and denied methods. These are lists

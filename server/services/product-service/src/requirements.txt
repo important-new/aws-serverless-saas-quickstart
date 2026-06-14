@@ -1,5 +1,5 @@
-requests
-pytest-mock
-aws-lambda-powertools[tracer]
-jsonpickle
-aws_requests_auth
+requests>=2.32,<3
+pytest-mock>=3.14,<4
+aws-lambda-powertools[tracer]>=3.0,<4
+jsonpickle>=4.0,<5
+aws-requests-auth>=0.4,<0.5

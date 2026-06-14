@@ -1,6 +1,5 @@
-aws-lambda-powertools[tracer]
-simplejson
-jsonpickle
-aws_requests_auth
-python-jose[cryptography]
-aws_requests_auth
+aws-lambda-powertools[tracer]>=3.0,<4
+simplejson>=3.19,<5
+jsonpickle>=4.0,<5
+aws-requests-auth>=0.4,<0.5
+PyJWT[crypto]>=2.10,<3
