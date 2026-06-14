@@ -1,0 +1,27 @@
+AWS Serverless SaaS Quick Start
+Copyright 2025 important-new
+
+This product is derived from the AWS SaaS Factory Serverless SaaS reference
+materials produced by Amazon Web Services:
+
+  - AWS Serverless SaaS Workshop
+    https://github.com/aws-samples/aws-serverless-saas-workshop
+
+  - AWS SaaS Factory Reference Solution - Serverless SaaS
+    https://github.com/aws-samples/aws-saas-factory-ref-solution-serverless-saas
+
+Portions of this software are Copyright Amazon.com, Inc. or its affiliates.
+
+The original sample code is made available by Amazon under the MIT-0 license
+(MIT No Attribution). The original workshop documentation is made available by
+Amazon under the Creative Commons Attribution-ShareAlike 4.0 International
+license (CC BY-SA 4.0).
+
+This repository as a whole, including modifications and newly authored code and
+documentation, is released under the MIT-0 license (see the LICENSE file).
+Documentation in this repository is original work authored for this project; it
+does not reproduce the CC BY-SA 4.0 workshop documentation. Where any such
+material is later incorporated, it remains under CC BY-SA 4.0 and must retain
+attribution to Amazon Web Services.
+
+Third-party dependency licenses are listed in THIRD-PARTY-LICENSES.txt.

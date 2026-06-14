@@ -4,6 +4,13 @@
 
 这是一个基于AWS无服务器技术栈构建的多租户SaaS应用参考架构。该项目展示了如何在AWS云平台上实现可扩展、安全且成本效益高的SaaS解决方案，支持多种租户隔离模式（池化和专用）。
 
+## 关于本项目与上游
+
+本项目派生自 AWS 官方的 [AWS Serverless SaaS Workshop](https://github.com/aws-samples/aws-serverless-saas-workshop)（基于其 `Lab6`），并在其基础上做了**后端架构重构、数据模型简化、运行时与依赖升级、部署脚本增强**等大量修改，已作为独立衍生项目按 MIT-0 演进。
+
+- 完整的差异清单与原因：[`docs/CHANGES_FROM_WORKSHOP.md`](docs/CHANGES_FROM_WORKSHOP.md)
+- 版权溯源与署名：[`NOTICE`](NOTICE) ｜ 许可证：[`LICENSE`](LICENSE)（MIT-0）
+
 ## 核心特性
 
 - **多租户架构**: 支持池化(Pooled)和专用(Silo)两种租户隔离模式
