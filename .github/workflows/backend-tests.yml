@@ -1,6 +1,7 @@
 name: backend-tests
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "server/**"

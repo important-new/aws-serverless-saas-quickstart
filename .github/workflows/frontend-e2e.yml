@@ -1,6 +1,7 @@
 name: frontend-e2e
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "client/**"
