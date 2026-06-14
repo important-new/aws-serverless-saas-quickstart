@@ -3,14 +3,12 @@ name: frontend-e2e
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - "client/**"
       - "e2e/**"
       - ".github/workflows/frontend-e2e.yml"
   pull_request:
-    paths:
-      - "client/**"
-      - "e2e/**"
 
 jobs:
   playwright:
