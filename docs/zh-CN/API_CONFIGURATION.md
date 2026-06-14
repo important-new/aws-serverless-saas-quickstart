@@ -51,7 +51,7 @@ CreateTenantAdminUserFunction:
   Type: AWS::Serverless::Function
   DependsOn: CreateUserLambdaExecutionRole
   Properties:
-    CodeUri: ../TenantManagementService/
+    CodeUri: ../tenant-management/
     Handler: user-management.create_tenant_admin_user
     Runtime: python3.13
     Role: !GetAtt CreateUserLambdaExecutionRole.Arn
@@ -68,7 +68,7 @@ CreateTenantAdminUserFunction:
 
 **关键配置**:
 - **函数名**: `CreateTenantAdminUserFunction`
-- **代码路径**: `../TenantManagementService/`
+- **代码路径**: `../tenant-management/`
 - **处理函数**: `user-management.create_tenant_admin_user`
 - **运行时**: `python3.13`
 - **IAM角色**: `CreateUserLambdaExecutionRole`
@@ -175,7 +175,7 @@ Environment:
 
 #### 1. 租户API Gateway配置
 
-**配置文件**: `server/tenant-template.yaml`
+**配置文件**: `server/services/tenant-api/template.yaml`
 
 ```yaml
 ApiGatewayTenantApi:
@@ -211,11 +211,9 @@ ApiGatewayTenantApi:
               - api_key: []  # API密钥认证
               - Authorizer: []  # Lambda授权器
             x-amazon-apigateway-integration:
-              uri: !Join
-                - ''
-                - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                  - !GetAtt GetOrdersFunction.Arn
-                  - /invocations
+              uri: !Sub 
+                - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                - FunctionArn: !Ref GetOrdersFunctionArn
               httpMethod: POST
               type: aws_proxy
 ```
@@ -231,18 +229,17 @@ ApiGatewayTenantApi:
 
 #### 2. Lambda 函数定义
 
-**配置文件**: `server/tenant-template.yaml`
+**配置文件**: `server/services/order-service/template.yaml`
 
 ```yaml
 GetOrdersFunction:
   Type: AWS::Serverless::Function 
-  DependsOn: OrderFunctionExecutionRole 
   Properties:
-    CodeUri: OrderService/
+    CodeUri: src/
     Handler: order_service.get_orders
     Tracing: Active
     Role: !GetAtt OrderFunctionExecutionRole.Arn
-    ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref "AWS::NoValue"]
+    ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref LambdaReserveConcurrency]
     Layers: 
       - !Ref ServerlessSaaSLayers
     Environment:
@@ -256,7 +253,7 @@ GetOrdersFunction:
 
 **关键配置**:
 - **函数名**: `GetOrdersFunction`
-- **代码路径**: `OrderService/`
+- **代码路径**: `src/`
 - **处理函数**: `order_service.get_orders`
 - **运行时**: `python3.13` (全局配置)
 - **IAM角色**: `OrderFunctionExecutionRole`
@@ -264,16 +261,14 @@ GetOrdersFunction:
 
 #### 3. Lambda 权限配置
 
-**配置文件**: `server/tenant-template.yaml`
+**配置文件**: `server/services/tenant-api/template.yaml`
 
 ```yaml
 GetOrdersLambdaApiGatewayExecutionPermission:
   Type: AWS::Lambda::Permission
   Properties:
     Action: lambda:InvokeFunction
-    FunctionName: !GetAtt 
-      - GetOrdersFunction
-      - Arn
+    FunctionName: !Ref GetOrdersFunctionArn
     Principal: apigateway.amazonaws.com
     SourceArn: !Join [
       "", [
@@ -293,7 +288,7 @@ GetOrdersLambdaApiGatewayExecutionPermission:
 
 #### 4. IAM 角色和策略
 
-**配置文件**: `server/tenant-template.yaml`
+**配置文件**: `server/services/order-service/template.yaml`
 
 ```yaml
 OrderFunctionExecutionRole:
@@ -378,12 +373,12 @@ OrderTable:
 
 | 组件 | 配置文件 | 关键配置 | 作用 |
 |------|----------|----------|------|
-| **租户API Gateway** | `tenant-template.yaml` | `ApiGatewayTenantApi` | 创建租户专用API网关 |
-| **API端点定义** | `tenant-template.yaml` | `DefinitionBody.paths` | 定义具体的API路由 |
-| **Lambda函数** | `tenant-template.yaml` | `GetOrdersFunction` | 业务逻辑处理 |
-| **权限控制** | `tenant-template.yaml` | `GetOrdersLambdaApiGatewayExecutionPermission` | API Gateway调用权限 |
-| **IAM角色** | `tenant-template.yaml` | `OrderFunctionExecutionRole` | Lambda执行权限 |
-| **数据存储** | `tenant-template.yaml` | `OrderTable` | 订单数据存储 |
+| **租户API Gateway** | `services/tenant-api/template.yaml` | `ApiGatewayTenantApi` | 创建租户专用API网关 |
+| **API端点定义** | `services/tenant-api/template.yaml` | `DefinitionBody.paths` | 定义具体的API路由 |
+| **Lambda函数** | `services/order-service/template.yaml` | `GetOrdersFunction` | 业务逻辑处理 |
+| **权限控制** | `services/tenant-api/template.yaml` | `GetOrdersLambdaApiGatewayExecutionPermission` | API Gateway调用权限 |
+| **IAM角色** | `services/order-service/template.yaml` | `OrderFunctionExecutionRole` | Lambda执行权限 |
+| **数据存储** | `services/order-service/template.yaml` | `OrderTable` | 订单数据存储 |
 
 ### 🔄 调用流程
 

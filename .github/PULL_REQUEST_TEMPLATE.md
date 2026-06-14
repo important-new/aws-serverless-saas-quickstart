@@ -26,5 +26,5 @@ Closes #
 - [ ] For frontend changes, I built all three apps (Admin, Application, Landing) and the Playwright smoke tests pass.
 - [ ] I updated the docs (README.md / README.zh-CN.md and docs/) if behavior changed.
 - [ ] No secrets, credentials, or AWS account IDs are committed.
-- [ ] My changes follow the coding conventions in [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md).
+- [ ] My changes follow the coding conventions in [CONTRIBUTING.md](CONTRIBUTING.md).
 - [ ] I confirm my contribution is licensed under the MIT-0 license.

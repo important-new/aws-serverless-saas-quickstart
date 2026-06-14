@@ -51,7 +51,7 @@ CreateTenantAdminUserFunction:
   Type: AWS::Serverless::Function
   DependsOn: CreateUserLambdaExecutionRole
   Properties:
-    CodeUri: ../TenantManagementService/
+    CodeUri: ../tenant-management/
     Handler: user-management.create_tenant_admin_user
     Runtime: python3.13
     Role: !GetAtt CreateUserLambdaExecutionRole.Arn
@@ -68,7 +68,7 @@ CreateTenantAdminUserFunction:
 
 **Key configuration**:
 - **Function name**: `CreateTenantAdminUserFunction`
-- **Code path**: `../TenantManagementService/`
+- **Code path**: `../tenant-management/`
 - **Handler function**: `user-management.create_tenant_admin_user`
 - **Runtime**: `python3.13`
 - **IAM role**: `CreateUserLambdaExecutionRole`
@@ -175,7 +175,7 @@ The `GetOrdersFunction` interface is a core component of the tenant business app
 
 #### 1. Tenant API Gateway Configuration
 
-**Configuration file**: `server/tenant-template.yaml`
+**Configuration file**: `server/services/tenant-api/template.yaml`
 
 ```yaml
 ApiGatewayTenantApi:
@@ -211,11 +211,9 @@ ApiGatewayTenantApi:
               - api_key: []  # API key authentication
               - Authorizer: []  # Lambda authorizer
             x-amazon-apigateway-integration:
-              uri: !Join
-                - ''
-                - - !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/
-                  - !GetAtt GetOrdersFunction.Arn
-                  - /invocations
+              uri: !Sub 
+                - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+                - FunctionArn: !Ref GetOrdersFunctionArn
               httpMethod: POST
               type: aws_proxy
 ```
@@ -231,18 +229,17 @@ ApiGatewayTenantApi:
 
 #### 2. Lambda Function Definition
 
-**Configuration file**: `server/tenant-template.yaml`
+**Configuration file**: `server/services/order-service/template.yaml`
 
 ```yaml
 GetOrdersFunction:
   Type: AWS::Serverless::Function 
-  DependsOn: OrderFunctionExecutionRole 
   Properties:
-    CodeUri: OrderService/
+    CodeUri: src/
     Handler: order_service.get_orders
     Tracing: Active
     Role: !GetAtt OrderFunctionExecutionRole.Arn
-    ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref "AWS::NoValue"]
+    ReservedConcurrentExecutions: !If [IsPooledDeploy, !Ref "AWS::NoValue" , !Ref LambdaReserveConcurrency]
     Layers: 
       - !Ref ServerlessSaaSLayers
     Environment:
@@ -256,7 +253,7 @@ GetOrdersFunction:
 
 **Key configuration**:
 - **Function name**: `GetOrdersFunction`
-- **Code path**: `OrderService/`
+- **Code path**: `src/`
 - **Handler function**: `order_service.get_orders`
 - **Runtime**: `python3.13` (global configuration)
 - **IAM role**: `OrderFunctionExecutionRole`
@@ -264,16 +261,14 @@ GetOrdersFunction:
 
 #### 3. Lambda Permission Configuration
 
-**Configuration file**: `server/tenant-template.yaml`
+**Configuration file**: `server/services/tenant-api/template.yaml`
 
 ```yaml
 GetOrdersLambdaApiGatewayExecutionPermission:
   Type: AWS::Lambda::Permission
   Properties:
     Action: lambda:InvokeFunction
-    FunctionName: !GetAtt 
-      - GetOrdersFunction
-      - Arn
+    FunctionName: !Ref GetOrdersFunctionArn
     Principal: apigateway.amazonaws.com
     SourceArn: !Join [
       "", [
@@ -293,7 +288,7 @@ GetOrdersLambdaApiGatewayExecutionPermission:
 
 #### 4. IAM Role and Policy
 
-**Configuration file**: `server/tenant-template.yaml`
+**Configuration file**: `server/services/order-service/template.yaml`
 
 ```yaml
 OrderFunctionExecutionRole:
@@ -378,12 +373,12 @@ OrderTable:
 
 | Component | Configuration File | Key Configuration | Purpose |
 |------|----------|----------|------|
-| **Tenant API Gateway** | `tenant-template.yaml` | `ApiGatewayTenantApi` | Creates a tenant-dedicated API gateway |
-| **API endpoint definition** | `tenant-template.yaml` | `DefinitionBody.paths` | Defines the specific API routes |
-| **Lambda function** | `tenant-template.yaml` | `GetOrdersFunction` | Handles business logic |
-| **Permission control** | `tenant-template.yaml` | `GetOrdersLambdaApiGatewayExecutionPermission` | API Gateway invocation permission |
-| **IAM role** | `tenant-template.yaml` | `OrderFunctionExecutionRole` | Lambda execution permissions |
-| **Data storage** | `tenant-template.yaml` | `OrderTable` | Order data storage |
+| **Tenant API Gateway** | `services/tenant-api/template.yaml` | `ApiGatewayTenantApi` | Creates a tenant-dedicated API gateway |
+| **API endpoint definition** | `services/tenant-api/template.yaml` | `DefinitionBody.paths` | Defines the specific API routes |
+| **Lambda function** | `services/order-service/template.yaml` | `GetOrdersFunction` | Handles business logic |
+| **Permission control** | `services/tenant-api/template.yaml` | `GetOrdersLambdaApiGatewayExecutionPermission` | API Gateway invocation permission |
+| **IAM role** | `services/order-service/template.yaml` | `OrderFunctionExecutionRole` | Lambda execution permissions |
+| **Data storage** | `services/order-service/template.yaml` | `OrderTable` | Order data storage |
 
 ### 🔄 Invocation Flow
 

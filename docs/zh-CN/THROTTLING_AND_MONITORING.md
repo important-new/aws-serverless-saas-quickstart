@@ -223,8 +223,8 @@ ThrottlingLimitExceeded:
 
 #### 📍 定义位置
 
-**文件**: `server/tenant-template.yaml`  
-**行号**: 375-384
+**文件**: `server/services/tenant-api/template.yaml`  
+**行号**: 109-119
 
 #### 🔧 Metric Filter 配置
 

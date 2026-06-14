@@ -49,18 +49,27 @@ npx playwright install chromium
 npx playwright test
 ```
 
-CI runs both on every push/PR — see [`.github/workflows/`](.github/workflows).
+CI runs both on every pull request — see [`.github/workflows/`](.github/workflows).
 
 ### Submitting changes
 
-1. Fork the repository and create a topic branch off `main`
-   (e.g. `fix/order-update-bug`, `feat/add-invoice-service`).
+`main` is a protected branch: **direct pushes are blocked and all changes must go
+through a Pull Request**. Required status checks must pass before a PR can be
+merged — the backend `pytest` suite on ubuntu/windows/macOS
+(`backend-tests.yml`) and the frontend Playwright suite (`frontend-e2e.yml`).
+These rules apply to everyone, maintainers included.
+
+1. Fork the repository (or, if you have write access, create a topic branch);
+   either way, branch off `main` (e.g. `fix/order-update-bug`,
+   `feat/add-invoice-service`). Never push directly to `main`.
 2. Make focused commits with clear messages. Keep unrelated changes in separate PRs.
 3. Ensure `pytest` passes and, for frontend changes, that all three apps build
    (`npx ng build --configuration production`) and Playwright smoke tests pass.
+   The same checks run in CI and must pass before merge.
 4. Update docs (`README.md` / `README.zh-CN.md` and anything under `docs/`) when
    behaviour or setup changes.
-5. Open a Pull Request using the template. Link any related issue.
+5. Open a Pull Request using the template. Link any related issue. A maintainer
+   merges it once the required checks are green.
 
 ### Coding conventions
 
@@ -118,15 +127,22 @@ npx playwright install chromium
 npx playwright test
 ```
 
-CI 在每次 push / PR 时运行二者，见 [`.github/workflows/`](.github/workflows)。
+CI 在每次 Pull Request 时运行二者，见 [`.github/workflows/`](.github/workflows)。
 
 ### 提交变更
 
-1. Fork 仓库，从 `main` 切出主题分支（如 `fix/order-update-bug`）。
+`main` 是受保护分支：**禁止直接推送，所有改动都必须通过 Pull Request 合入**。合并前
+必须通过所需的状态检查 —— 后端在 ubuntu/windows/macOS 上的 `pytest` 套件
+（`backend-tests.yml`）以及前端的 Playwright 套件（`frontend-e2e.yml`）。该规则对所有
+人生效，包括维护者。
+
+1. Fork 仓库（若你拥有写权限，也可直接创建主题分支），无论哪种方式都从 `main` 切出主题
+   分支（如 `fix/order-update-bug`）。切勿直接推送到 `main`。
 2. 提交粒度清晰、信息明确；无关改动请拆分到不同 PR。
-3. 确保 `pytest` 通过；前端改动需保证三个 app 均能构建并通过 Playwright 冒烟。
+3. 确保 `pytest` 通过；前端改动需保证三个 app 均能构建并通过 Playwright 冒烟。相同的检查
+   会在 CI 中运行，且必须在合并前通过。
 4. 行为或配置变化时，同步更新文档（`README.md` / `README.zh-CN.md` 及 `docs/`）。
-5. 使用模板提交 Pull Request，并关联相关 issue。
+5. 使用模板提交 Pull Request，并关联相关 issue。所需检查全部通过后，由维护者完成合并。
 
 ### 编码约定
 

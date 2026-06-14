@@ -223,8 +223,8 @@ This design ensures that the multi-tenant SaaS platform can provide a differenti
 
 #### 📍 Definition Location
 
-**File**: `server/tenant-template.yaml`  
-**Lines**: 375-384
+**File**: `server/services/tenant-api/template.yaml`  
+**Lines**: 109-119
 
 #### 🔧 Metric Filter Configuration
 
