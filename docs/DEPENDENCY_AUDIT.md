@@ -54,6 +54,27 @@
 | 🟢 P2（杂项） | `@types/node` 升级、CDK lockfile 核对 | 低 |
 | 🟡 P3（大工程） | 前端 Angular 20/21 + Amplify v6 + ui-angular 5.x 整体升级 | 高，破坏性，需单独立项 |
 
+## 4.1 处置进度（2026-06-14，分支 `chore/dependency-modernization`）
+
+| 级别 | 状态 | 说明 |
+|---|---|---|
+| 🔴 P0 | ✅ 完成 | `python-jose` → `PyJWT[crypto]`，重写两个 authorizer 验签；6 用例单元验证通过 |
+| 🟠 P1 | ✅ 完成 | 全部 `requirements.txt` 锁版本（兼容区间锁大版本） |
+| 🟢 P2 | ✅ 完成 | `@types/node`→`^20`、`aws-cdk-lib`→`^2.258` 并刷新 lockfile；修 `\*` 转义 |
+| 🟡 P3 | ✅ 完成（构建层） | **三个前端应用全部 Angular 14 → 20**；Admin/Application 同时 **Amplify v4 → v6**、ui-angular 2→5；移除已废弃的 `@angular/flex-layout`；生产构建均通过 |
+
+### 前端迁移要点
+- 统一各 `@angular/*` 至 `^20`、TypeScript `5.8`、zone.js `0.15`、rxjs `7.8`。
+- Material：移除已删的 `legacy-*` 导入；主题改用 M3 `mat.theme()`（indigo→violet、pink→rose，视觉相近）。
+- Angular 19 起组件默认 standalone：给 NgModule 声明的组件补 `standalone: false`。
+- Amplify v6：`Auth.currentSession()`→`fetchAuthSession()`、`getJwtToken()`→`token.toString()`、`isValid()`→`!!tokens?.idToken`、`Auth.signOut()`→`signOut()`；`Amplify.configure(aws_exports)` 旧格式 v6 仍兼容。
+- SCSS 去除 webpack `~` 前缀；ui-angular 5 的 `theme.css` 经 angular.json `styles` 引入（其 exports 字段不暴露该子路径）。
+
+### ⚠️ 尚未验证（需运行时确认）
+- 生产构建通过 ≠ 运行时通过。**Amplify v6 的登录/会话/登出流程需在浏览器实测**（`npm start` + 真实 Cognito 登录）。
+- 后端 PyJWT 为独立单元验证，**未在已部署的 Lambda 中集成测试**。
+- Material 主题色由 indigo 变为 violet（如需精确品牌色需自定义 M3 调色板）。
+
 ## 5. 信息来源
 
 - AWS Lambda runtimes：<https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html>
