@@ -300,8 +300,9 @@ def get_user(event, context):
 **Association validation in the authorizer**:
 ```python
 def lambda_handler(event, context):
-    # 1. Extract the tenant ID from the JWT token
-    unauthorized_claims = jwt.get_unverified_claims(jwt_bearer_token)
+    # 1. Extract the tenant ID from the JWT token (PyJWT; read claims without
+    #    signature verification first — the signature is verified in step 4)
+    unauthorized_claims = jwt.decode(jwt_bearer_token, options={"verify_signature": False})
     tenant_id = unauthorized_claims['custom:tenantId']
     
     # 2. Query the tenant details to validate the association

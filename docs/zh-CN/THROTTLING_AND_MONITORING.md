@@ -406,7 +406,30 @@ Statistic: SampleCount
 - **逻辑**: 任何非零的限流事件都表示API限流被触发
 - **适用性**: 适用于所有Tier等级，因为任何限流都值得关注
 
-#### 分层预警策略
+#### 当前实际实现的告警
+
+当前代码库在 `server/services/tenant-api/template.yaml` 中只定义了**单个、按租户**的
+限流告警,**没有**按 tier 区分的告警:
+
+```yaml
+ThrottlingLimitExceeded:
+  Type: AWS::CloudWatch::Alarm
+  Properties:
+    AlarmDescription: Throttling limit exceeded errors
+    ComparisonOperator: GreaterThanThreshold
+    EvaluationPeriods: 1
+    MetricName: !Join ['-', ["ThrottlingLimitExceeded", !Ref TenantIdParameter]]
+    Namespace: "Serverless-SaaS-Reference-Architecture"
+    Period: 60
+    Statistic: SampleCount
+    Threshold: 0
+```
+
+#### 分层预警策略(设想 —— 尚未实现)
+
+> 以下为**示意性设计**,并不在当前模板中。一个自然的扩展是为每个 tier 设置各自的
+> 阈值与评估窗口,从而对较低等级实施更严格的监控:
+
 ```yaml
 # Basic Tier - 严格监控
 BasicTierThrottlingAlarm:

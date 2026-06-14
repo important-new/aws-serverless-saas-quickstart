@@ -343,21 +343,21 @@ OrderFunctionExecutionRolePolicy:
 
 #### 5. 数据存储配置
 
-**配置文件**: `server/tenant-template.yaml`
+**配置文件**: `server/services/order-service/template.yaml`
 
 ```yaml
 OrderTable:
   Type: AWS::DynamoDB::Table
   Properties: 
     AttributeDefinitions:
-      - AttributeName: shardId
+      - AttributeName: tenant_id
         AttributeType: S 
-      - AttributeName: orderId
+      - AttributeName: order_id
         AttributeType: S          
     KeySchema:
-      - AttributeName: shardId
+      - AttributeName: tenant_id
         KeyType: HASH 
-      - AttributeName: orderId
+      - AttributeName: order_id
         KeyType: RANGE  
     ProvisionedThroughput: 
       ReadCapacityUnits: 5
@@ -370,8 +370,8 @@ OrderTable:
 
 **关键配置**:
 - **表名**: 包含租户ID的动态命名 (`Order-{tenantId}`)
-- **分区键**: `shardId` (用于多租户数据隔离)
-- **排序键**: `orderId` (订单唯一标识)
+- **分区键**: `tenant_id` (用于多租户数据隔离)
+- **排序键**: `order_id` (订单唯一标识)
 - **标签**: 包含租户ID用于资源管理
 
 ### 📊 配置关系总结

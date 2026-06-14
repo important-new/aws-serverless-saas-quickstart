@@ -406,7 +406,31 @@ Statistic: SampleCount
 - **Logic**: Any non-zero throttling event indicates that API throttling has been triggered
 - **Applicability**: Applies to all tiers, because any throttling is worth attention
 
-#### Tiered Alerting Strategy
+#### Currently Implemented Alarm
+
+The codebase currently defines a **single, per-tenant** throttling alarm in
+`server/services/tenant-api/template.yaml` — there is no tier-specific alarm:
+
+```yaml
+ThrottlingLimitExceeded:
+  Type: AWS::CloudWatch::Alarm
+  Properties:
+    AlarmDescription: Throttling limit exceeded errors
+    ComparisonOperator: GreaterThanThreshold
+    EvaluationPeriods: 1
+    MetricName: !Join ['-', ["ThrottlingLimitExceeded", !Ref TenantIdParameter]]
+    Namespace: "Serverless-SaaS-Reference-Architecture"
+    Period: 60
+    Statistic: SampleCount
+    Threshold: 0
+```
+
+#### Tiered Alerting Strategy (proposed — not yet implemented)
+
+> The following is an **illustrative design**, not part of the current
+> templates. A natural extension is to give each tier its own threshold and
+> evaluation window so that lower tiers are watched more strictly:
+
 ```yaml
 # Basic Tier - Strict monitoring
 BasicTierThrottlingAlarm:

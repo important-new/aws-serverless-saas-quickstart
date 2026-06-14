@@ -343,21 +343,21 @@ OrderFunctionExecutionRolePolicy:
 
 #### 5. Data Storage Configuration
 
-**Configuration file**: `server/tenant-template.yaml`
+**Configuration file**: `server/services/order-service/template.yaml`
 
 ```yaml
 OrderTable:
   Type: AWS::DynamoDB::Table
   Properties: 
     AttributeDefinitions:
-      - AttributeName: shardId
+      - AttributeName: tenant_id
         AttributeType: S 
-      - AttributeName: orderId
+      - AttributeName: order_id
         AttributeType: S          
     KeySchema:
-      - AttributeName: shardId
+      - AttributeName: tenant_id
         KeyType: HASH 
-      - AttributeName: orderId
+      - AttributeName: order_id
         KeyType: RANGE  
     ProvisionedThroughput: 
       ReadCapacityUnits: 5
@@ -370,8 +370,8 @@ OrderTable:
 
 **Key configuration**:
 - **Table name**: Dynamically named to include the tenant ID (`Order-{tenantId}`)
-- **Partition key**: `shardId` (used for multi-tenant data isolation)
-- **Sort key**: `orderId` (unique order identifier)
+- **Partition key**: `tenant_id` (used for multi-tenant data isolation)
+- **Sort key**: `order_id` (unique order identifier)
 - **Tags**: Include the tenant ID for resource management
 
 ### 📊 Configuration Relationship Summary

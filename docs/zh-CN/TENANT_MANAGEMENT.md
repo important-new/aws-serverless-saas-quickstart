@@ -300,8 +300,9 @@ def get_user(event, context):
 **授权器中的关联验证**:
 ```python
 def lambda_handler(event, context):
-    # 1. 从JWT Token中提取租户ID
-    unauthorized_claims = jwt.get_unverified_claims(jwt_bearer_token)
+    # 1. 从JWT Token中提取租户ID(PyJWT;先不验证签名读取声明,
+    #    签名在第 4 步验证)
+    unauthorized_claims = jwt.decode(jwt_bearer_token, options={"verify_signature": False})
     tenant_id = unauthorized_claims['custom:tenantId']
     
     # 2. 查询租户详情验证关联
