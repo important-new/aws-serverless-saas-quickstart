@@ -17,6 +17,7 @@ interface ChartData {
 }
 
 @Component({
+  standalone: false,
   templateUrl: 'dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
   selector: 'app-dashboard',

@@ -11,10 +11,11 @@ import {
 } from '@angular/router';
 
 import { AuthenticatorService } from '@aws-amplify/ui-angular';
-import { Auth } from 'aws-amplify';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { navItems } from '../_nav';
 
 @Component({
+  standalone: false,
   selector: 'app-nav',
   templateUrl: './nav.component.html',
   styleUrls: ['./nav.component.css'],
@@ -51,18 +52,18 @@ export class NavComponent implements OnInit {
 
   ngOnInit(): void {
     try {
-      const s = Auth.currentSession().catch((err) => err);
+      const s = fetchAuthSession().catch((err) => null);
       const session$ = from(s);
       this.isAuthenticated$ = session$.pipe(
         filter((sesh) => !!sesh),
-        map((sesh) => sesh && sesh.isValid())
+        map((sesh) => !!sesh?.tokens?.idToken)
       );
-      const token$ = session$.pipe(map((sesh) => sesh && sesh.getIdToken()));
+      const token$ = session$.pipe(map((sesh) => sesh?.tokens?.idToken));
       this.username$ = token$.pipe(
-        map((t) => t && t.payload['cognito:username'])
+        map((t) => (t && (t.payload['cognito:username'] as string)) || '')
       );
       this.companyName$ = token$.pipe(
-        map((t) => t.payload['custom:company-name'])
+        map((t) => (t && (t.payload['custom:company-name'] as string)) || '')
       );
     } catch (err) {
       console.error('Unable to get current session.');

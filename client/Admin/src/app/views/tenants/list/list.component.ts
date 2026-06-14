@@ -4,6 +4,7 @@ import { Tenant } from '../models/tenant';
 import { TenantsService } from '../tenants.service';
 
 @Component({
+  standalone: false,
   selector: 'app-list',
   templateUrl: './list.component.html',
   styleUrls: ['./list.component.scss'],
