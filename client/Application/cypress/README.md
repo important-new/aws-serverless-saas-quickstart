@@ -1,8 +1,16 @@
-# Application End-to-End Testing
+# Application End-to-End Testing (Legacy Cypress)
 
-## Instructions
+> **Note:** The canonical e2e suite is now [Playwright](https://playwright.dev) at the repo root `e2e/` directory. Run it with:
+>
+> ```bash
+> cd e2e && npx playwright test
+> ```
+>
+> The Cypress specs in this folder are legacy/optional and kept for reference only.
 
-To run End-to-End (e2e) tests against the Sample Application, take the following steps:
+## Instructions (legacy Cypress)
+
+To run the legacy Cypress e2e tests against the Sample Application, take the following steps:
 
 1. Make a copy of the example env file (`cypress.env.json.example`):
 
@@ -22,7 +30,7 @@ cp cypress.env.json.example cypress.env.json
 
 - `email`: The email address to use for testing. (This should be a valid email address.)
 
-3. Navigate to the root of the Application project (`aws-saas-factory-ref-solution-serverless-saas/clients/Application/`) and run the following:
+3. Navigate to the root of the Application project (`aws-serverless-saas-quickstart/client/Application/`) and run the following:
 
 ```bash
 npx cypress run

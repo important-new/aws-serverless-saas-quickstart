@@ -10,8 +10,8 @@ This project is a reference architecture and quick-start derived from the AWS
 Serverless SaaS Workshop. It is community-maintained and licensed under MIT-0.
 
 Only the latest `main` branch is supported. There are no tagged releases and no
-backported security patches for older commits. Fixes land on `main`; if you are
-running an older checkout, please update to the latest `main`.
+backported security patches for older commits; security fixes land on `main`.
+If you are running an older checkout, please update to the latest `main`.
 
 | Version | Supported |
 | --- | --- |
@@ -83,9 +83,9 @@ This project is distributed under the terms in [LICENSE](LICENSE).
 本项目是基于 AWS Serverless SaaS Workshop 衍生的参考架构与快速入门模板，由社区维护，
 采用 MIT-0 许可证。
 
-仅支持最新的 `main` 分支。本项目没有发布带标签的版本，也不会为较旧的提交提供安全补丁的
-回溯（backport）。所有修复都会合入 `main`；如果你正在使用较旧的检出版本，请更新到最新的
-`main`。
+仅支持最新的 `main` 分支。本项目没有打标签的发布版本，也不会为较旧的提交提供回溯
+（backport）安全补丁；安全修复都会合入 `main`。如果你正在使用较旧的检出版本，请更新到
+最新的 `main`。
 
 | 版本 | 是否受支持 |
 | --- | --- |

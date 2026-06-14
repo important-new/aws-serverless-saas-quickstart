@@ -1,6 +1,6 @@
 # Application
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 14.0.5.
+This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 20.x.
 
 ## Development server
 
@@ -20,7 +20,13 @@ Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.
 
 ## Running end-to-end tests
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+The canonical e2e suite is [Playwright](https://playwright.dev) at the repo root `e2e/` directory. Run it with:
+
+```bash
+cd e2e && npx playwright test
+```
+
+Legacy Cypress specs still exist under `cypress/` (see `cypress/README.md`), but Playwright is the canonical path.
 
 ## Further help
 

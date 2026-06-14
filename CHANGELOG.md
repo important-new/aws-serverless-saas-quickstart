@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Branch protection on `main`: direct pushes are blocked, a Pull Request is
+  required for all changes, and required status checks must pass before merge.
+
+### Changed
+- Both CI workflows (`backend-tests.yml`, `frontend-e2e.yml`) now run the full
+  pytest and Playwright suites on every pull request, gating merges into `main`.
+
 ## [2.0.0] - 2026-06-14
 
 Dependency & runtime modernization, a cross-platform test suite, and a security
@@ -21,7 +29,7 @@ major upgrades, hence the major version bump.
 ### Added
 - Cross-platform backend test suite using **pytest + moto** (in-memory DynamoDB,
   no Docker/AWS required): `requirements-test.txt`, `pytest.ini`, `server/conftest.py`,
-  and per-service `tests/test_*.py`.
+  and tests for the product and order services (`tests/test_*.py`).
 - Cross-platform frontend smoke tests using **Playwright** (`e2e/`).
 - **GitHub Actions CI**: `.github/workflows/backend-tests.yml` (pytest on
   ubuntu/windows/macOS) and `.github/workflows/frontend-e2e.yml`, both with
@@ -63,7 +71,7 @@ major upgrades, hence the major version bump.
 
 ## [1.0.1] - 2025-08-05
 
-Initial tagged baseline of the derivative: Lab6 reworked from a teaching-oriented
+Initial baseline of the derivative: Lab6 reworked from a teaching-oriented
 lab into a deployable, structurally simplified reference implementation. See
 [`docs/CHANGES_FROM_WORKSHOP.md`](docs/CHANGES_FROM_WORKSHOP.md) for the complete
 divergence record and the upstream→quickstart path mapping.
@@ -97,6 +105,5 @@ divergence record and the upstream→quickstart path mapping.
   `shared-template.yaml` / `tenant-template.yaml`, plus the `shardId`-based
   sharding strategy and its parallel-query logic.
 
-[Unreleased]: https://github.com/important-new/aws-serverless-saas-quickstart/compare/2.0.0...HEAD
-[2.0.0]: https://github.com/important-new/aws-serverless-saas-quickstart/compare/1.0.1...2.0.0
-[1.0.1]: https://github.com/important-new/aws-serverless-saas-quickstart/releases/tag/1.0.1
+<!-- This project does not publish git tags / GitHub releases; the version
+     sections above document changes by date. See git history for the commits. -->

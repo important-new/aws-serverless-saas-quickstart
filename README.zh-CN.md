@@ -161,10 +161,10 @@ aws-serverless-saas-quickstart/
 
 本 README 为高层入口,深入的架构剖析位于 [`docs/`](docs/) 目录下:
 
-- [`docs/ARCHITECTURE.md`](docs/zh-CN/ARCHITECTURE.md) —— 架构索引(技术栈、数据库设计、结构)
-- [`docs/TENANT_MANAGEMENT.md`](docs/zh-CN/TENANT_MANAGEMENT.md) —— 平台租户管理实现(生命周期、用户/租户关联、权限控制、分级)
-- [`docs/API_CONFIGURATION.md`](docs/zh-CN/API_CONFIGURATION.md) —— 管理端与租户端接口配置关系剖析
-- [`docs/THROTTLING_AND_MONITORING.md`](docs/zh-CN/THROTTLING_AND_MONITORING.md) —— 监控运维、使用计划限流,以及 CloudWatch 限流指标机制
+- [`docs/zh-CN/ARCHITECTURE.md`](docs/zh-CN/ARCHITECTURE.md) —— 架构索引(技术栈、数据库设计、结构)
+- [`docs/zh-CN/TENANT_MANAGEMENT.md`](docs/zh-CN/TENANT_MANAGEMENT.md) —— 平台租户管理实现(生命周期、用户/租户关联、权限控制、分级)
+- [`docs/zh-CN/API_CONFIGURATION.md`](docs/zh-CN/API_CONFIGURATION.md) —— 管理端与租户端接口配置关系剖析
+- [`docs/zh-CN/THROTTLING_AND_MONITORING.md`](docs/zh-CN/THROTTLING_AND_MONITORING.md) —— 监控运维、使用计划限流,以及 CloudWatch 限流指标机制
 - [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) ｜ [`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md) ｜ [`docs/CHANGES_FROM_WORKSHOP.md`](docs/CHANGES_FROM_WORKSHOP.md) ｜ [`docs/DEPENDENCY_AUDIT.md`](docs/DEPENDENCY_AUDIT.md)
 
 深度剖析的英文版位于 [`docs/`](docs/) 根目录。

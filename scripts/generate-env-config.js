@@ -18,27 +18,18 @@ if (!projectName) {
 console.log(`Generating environment config for ${projectName} (${environment})...`);
 
 try {
-  // 获取API Gateway URL
-  let apiGatewayUrl = '';
-  
-  if (environment === 'prod') {
-    // 查询生产环境的API Gateway
-    const result = execSync('aws apigateway get-rest-apis --query "items[?name==\'saas-quickstart-shared\'].id" --output text', { encoding: 'utf8' });
-    const apiId = result.trim();
-    if (apiId) {
-      apiGatewayUrl = `https://${apiId}.execute-api.us-east-1.amazonaws.com/prod`;
-    }
-  } else {
-    // 查询开发环境的API Gateway
-    const result = execSync('aws apigateway get-rest-apis --query "items[?name==\'saas-quickstart-shared-dev\'].id" --output text', { encoding: 'utf8' });
-    const apiId = result.trim();
-    if (apiId) {
-      apiGatewayUrl = `https://${apiId}.execute-api.us-east-1.amazonaws.com/dev`;
-    }
-  }
+  // 从共享(控制平面)栈 saas-control-stack 读取 AdminApi 输出。
+  // 该输出本身就是完整的 API Gateway URL，例如:
+  //   https://<id>.execute-api.us-east-1.amazonaws.com/prod
+  const result = execSync(
+    'aws cloudformation describe-stacks --stack-name saas-control-stack --query "Stacks[0].Outputs[?OutputKey==\'AdminApi\'].OutputValue" --output text',
+    { encoding: 'utf8' }
+  );
+  const apiGatewayUrl = result.trim();
 
-  if (!apiGatewayUrl) {
-    console.error('Could not find API Gateway URL');
+  if (!apiGatewayUrl || apiGatewayUrl === 'None') {
+    console.error('Could not find API Gateway URL (AdminApi output) on stack saas-control-stack');
+    console.error('Make sure the shared stack is deployed (cd scripts && ./deployment.sh)');
     process.exit(1);
   }
 

@@ -1,11 +1,11 @@
 ## 项目概览
 
-Admin 是一个使用 Angular 14 构建的管理端前端应用，集成 AWS Amplify（Cognito User Pool）完成用户认证，通过全局 HTTP 拦截器为 API 请求自动附加 ID Token 进行后端鉴权。路由采用懒加载模块，顶层使用 `AmplifyAuthenticator` 门户在 UI 层完成“登录后可见”的访问控制。
+Admin 是一个使用 Angular 20 构建的管理端前端应用，集成 AWS Amplify（Cognito User Pool）完成用户认证，通过全局 HTTP 拦截器为 API 请求自动附加 ID Token 进行后端鉴权。路由采用懒加载模块，顶层使用 `AmplifyAuthenticator` 门户在 UI 层完成“登录后可见”的访问控制。
 
 ## 技术栈
 
-- **框架**: Angular 14, RxJS 7
-- **UI**: Angular Material, Angular CDK, Flex Layout, Bootstrap
+- **框架**: Angular 20, RxJS 7
+- **UI**: Angular Material, Angular CDK, Bootstrap
 - **认证**: AWS Amplify UI + Cognito User Pool (`@aws-amplify/ui-angular`, `aws-amplify`)
 - **网络**: Angular `HttpClient` + 自定义 `HttpInterceptor`
 - **部署**: S3/CloudFront（脚本使用 AWS CLI 从 CloudFormation 读取输出并同步静态资源）
@@ -24,14 +24,14 @@ Admin 是一个使用 Angular 14 构建的管理端前端应用，集成 AWS Amp
   </amplify-authenticator>`
   ```
 
-- **会话与登出**: 使用 `Auth.currentSession()` 获取当前会话；`Auth.signOut({ global: true })` 退出登录（见 `views/auth/AuthComponent`）。
+- **会话与登出**: 使用 `fetchAuthSession()` 获取当前会话；`signOut({ global: true })` 退出登录（均来自 `aws-amplify/auth`，见 `views/auth/AuthComponent`）。
 - **后端鉴权（令牌附加）**: 自定义拦截器 `AuthInterceptor`（在 `app/interceptors` 提供）对除包含 `tenant/init` 的请求外的所有 HTTP 请求读取当前会话 ID Token，并在请求头加入 `Authorization: Bearer <JWT>`：
 
   ```ts
   // src/app/interceptors/auth.interceptor.ts（节选）
-  return from(Auth.currentSession()).pipe(
-    filter((sesh) => !!sesh),
-    map((sesh) => sesh.getIdToken().getJwtToken()),
+  return from(fetchAuthSession()).pipe(
+    filter((sesh) => !!sesh?.tokens?.idToken),
+    map((sesh) => sesh?.tokens?.idToken?.toString() ?? ''),
     switchMap((tok) => next.handle(req.clone({
       headers: req.headers.set('Authorization', 'Bearer ' + tok),
     })))
@@ -104,7 +104,7 @@ Admin 是一个使用 Angular 14 构建的管理端前端应用，集成 AWS Amp
 
 ## 权限与路由控制的扩展建议
 
-- 如需前端基于角色的控制，可新增守卫（如 `CanActivate`）读取 `Auth.currentSession()` 的 ID Token Claim（例如 Cognito 组或自定义 Claim），结合路由 `data` 元信息决定放行与否。
+- 如需前端基于角色的控制，可新增守卫（如 `CanActivate`）读取 `fetchAuthSession()` 的 ID Token Claim（例如 Cognito 组或自定义 Claim），结合路由 `data` 元信息决定放行与否。
 - 导航菜单可基于角色/Claim 进行动态过滤。
 - 如需白名单更多无需鉴权的接口，可在 `AuthInterceptor` 中扩展排除逻辑。
 
