@@ -1,0 +1,85 @@
+name: Bug report
+description: Report a problem with AWS Serverless SaaS Quick Start
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report!
+
+        **Do NOT report security vulnerabilities here.** Please report them privately
+        following our [Security Policy](../blob/main/SECURITY.md).
+
+        Before opening a new issue, please **search the existing issues** to avoid
+        creating duplicates.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug.
+      placeholder: Describe the actual behavior you observed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Step-by-step instructions to reproduce the behavior.
+      placeholder: |
+        1. Deploy '...'
+        2. Call endpoint '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: input
+    id: affected-component
+    attributes:
+      label: Affected component
+      description: Which part of the project is affected?
+      placeholder: e.g. product-service, order-service, tenant-api, server/shared (auth/layers), Admin/Application/Landing client, CloudFormation/SAM templates
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Details about your environment.
+      placeholder: |
+        - OS:
+        - Python version (project uses 3.13):
+        - Node.js version (20.19+ / 22.12+):
+        - AWS region:
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / output
+      description: Paste any relevant log output. This will be rendered as code.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have searched the existing issues and this is not a duplicate.
+          required: true
+        - label: This is not a security vulnerability (those are reported privately per the Security Policy).
+          required: true

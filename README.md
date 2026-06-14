@@ -1,67 +1,70 @@
 # AWS Serverless SaaS Quick Start
 
-## 项目概述
+[**English**](README.md) ｜ [中文](README.zh-CN.md)
 
-这是一个基于AWS无服务器技术栈构建的多租户SaaS应用参考架构。该项目展示了如何在AWS云平台上实现可扩展、安全且成本效益高的SaaS解决方案，支持多种租户隔离模式（池化和专用）。
+## Project Overview
 
-## 关于本项目与上游
+This is a reference architecture for a multi-tenant SaaS application built on the AWS serverless technology stack. The project demonstrates how to implement a scalable, secure, and cost-effective SaaS solution on the AWS cloud platform, supporting multiple tenant isolation models (pooled and silo).
 
-本项目派生自 AWS 官方的 [AWS Serverless SaaS Workshop](https://github.com/aws-samples/aws-serverless-saas-workshop)（基于其 `Lab6`），并在其基础上做了**后端架构重构、数据模型简化、运行时与依赖升级、部署脚本增强**等大量修改，已作为独立衍生项目按 MIT-0 演进。
+## About This Project and Upstream
 
-- 完整的差异清单与原因：[`docs/CHANGES_FROM_WORKSHOP.md`](docs/CHANGES_FROM_WORKSHOP.md)
-- 版权溯源与署名：[`NOTICE`](NOTICE) ｜ 许可证：[`LICENSE`](LICENSE)（MIT-0）
+This project is derived from the official AWS [AWS Serverless SaaS Workshop](https://github.com/aws-samples/aws-serverless-saas-workshop) (based on its `Lab6`), and builds on it with extensive changes including **backend architecture refactoring, data model simplification, runtime and dependency upgrades, and deployment script enhancements**. It now evolves as an independent derivative project under MIT-0.
 
-## 核心特性
+- Full list of differences and their rationale: [`docs/CHANGES_FROM_WORKSHOP.md`](docs/CHANGES_FROM_WORKSHOP.md)
+- Copyright provenance and attribution: [`NOTICE`](NOTICE) ｜ License: [`LICENSE`](LICENSE) (MIT-0)
 
-- **多租户架构**: 支持池化(Pooled)和专用(Silo)两种租户隔离模式
-- **分层服务**: 支持Basic、Standard、Premium、Platinum四种服务等级
-- **无服务器架构**: 基于AWS Lambda、API Gateway、DynamoDB等无服务器服务
-- **身份认证**: 集成AWS Cognito进行用户身份管理
-- **API限流**: 基于租户等级的API使用量控制
-- **监控和日志**: 集成CloudWatch和X-Ray进行应用监控
-- **自动化部署**: 使用AWS SAM和CDK进行基础设施即代码
+## Core Features
 
-## 技术架构
+- **Multi-tenant architecture**: Supports both pooled and silo tenant isolation models
+- **Tiered services**: Supports four service tiers — Basic, Standard, Premium, and Platinum
+- **Serverless architecture**: Built on serverless services such as AWS Lambda, API Gateway, and DynamoDB
+- **Identity authentication**: Integrates AWS Cognito for user identity management
+- **API throttling**: Tier-based API usage control
+- **Monitoring and logging**: Integrates CloudWatch and X-Ray for application monitoring
+- **Automated deployment**: Uses AWS SAM and CDK for infrastructure as code
 
-### 后端服务 (server/)
-- **AWS Lambda**: 无服务器计算服务
-- **API Gateway**: RESTful API管理和路由
-- **DynamoDB**: NoSQL数据库存储
-- **AWS Cognito**: 用户身份认证和授权
-- **CloudFormation/SAM**: 基础设施即代码
-- **Python 3.9**: 后端开发语言
+## Technical Architecture
 
-### 数据库设计规则
+### Backend Services (server/)
+- **AWS Lambda**: Serverless compute service
+- **API Gateway**: RESTful API management and routing
+- **DynamoDB**: NoSQL database storage
+- **AWS Cognito**: User identity authentication and authorization
+- **CloudFormation/SAM**: Infrastructure as code
+- **Python 3.13**: Backend development language
+- **PyJWT[crypto]**: Cognito JWT validation (replaces the unmaintained `python-jose`, avoiding CVE-2024-33663/33664)
 
-#### DynamoDB 表设计原则
+### Database Design Rules
 
-基于AWS官方推荐的最佳实践，本项目采用简化的分区键设计，移除了复杂的分片策略，以提高性能和降低成本。
+#### DynamoDB Table Design Principles
 
-##### 核心设计原则
+Based on AWS's officially recommended best practices, this project adopts a simplified partition-key design and removes the complex sharding strategy to improve performance and reduce cost.
 
-1. **均匀分布**: 使用租户ID作为分区键，确保数据均匀分布
-2. **避免热点**: 每个租户独立分区，避免热点问题
-3. **可预测访问**: 基于租户的访问模式更加可预测
-4. **简化查询**: 无需复杂的并行查询逻辑
+##### Core Design Principles
 
-##### 标准表结构
+1. **Even distribution**: Use the tenant ID as the partition key to ensure data is evenly distributed
+2. **Hot-spot avoidance**: Each tenant has its own partition, avoiding hot-spot issues
+3. **Predictable access**: Tenant-based access patterns are more predictable
+4. **Simplified queries**: No need for complex parallel query logic
+
+##### Standard Table Structure
 
 ```python
-# 统一的数据模型设计
+# Unified data model design
 {
-    "tenant_id": "tenant1",           # 分区键 (HASH)
-    "entity_id": "uuid-123",         # 排序键 (RANGE)
-    "entity_type": "PRODUCT",        # 实体类型标识
-    "created_at": "2024-01-01T00:00:00Z",  # 创建时间
-    "updated_at": "2024-01-01T00:00:00Z",  # 更新时间
-    # ... 业务字段
+    "tenant_id": "tenant1",           # Partition key (HASH)
+    "entity_id": "uuid-123",         # Sort key (RANGE)
+    "entity_type": "PRODUCT",        # Entity type identifier
+    "created_at": "2024-01-01T00:00:00Z",  # Creation time
+    "updated_at": "2024-01-01T00:00:00Z",  # Update time
+    # ... business fields
 }
 ```
 
-##### CloudFormation 表定义
+##### CloudFormation Table Definition
 
 ```yaml
-# 标准表结构模板
+# Standard table structure template
 TableName:
   Type: AWS::DynamoDB::Table
   Properties:
@@ -80,208 +83,208 @@ TableName:
       WriteCapacityUnits: 5
 ```
 
-##### 查询策略
+##### Query Strategy
 
 ```python
-# 标准查询模式
+# Standard query pattern
 response = table.query(
     KeyConditionExpression=Key('tenant_id').eq(tenant_id),
     ReturnConsumedCapacity='TOTAL'
 )
 ```
 
-##### 性能优化考虑
+##### Performance Optimization Considerations
 
-- **小数据量**（< 1000个实体/租户）：简单查询足够
-- **大数据量**（> 1000个实体/租户）：可考虑添加GSI
-- **成本敏感**：当前设计最小化存储成本
+- **Small data volumes** (< 1000 entities/tenant): Simple queries are sufficient
+- **Large data volumes** (> 1000 entities/tenant): Consider adding a GSI
+- **Cost-sensitive**: The current design minimizes storage cost
 
-##### 数据迁移策略
+##### Data Migration Strategy
 
-1. **备份现有数据**
-2. **运行迁移脚本**
-3. **验证迁移结果**
-4. **更新应用程序代码**
-5. **删除旧数据**
+1. **Back up existing data**
+2. **Run the migration script**
+3. **Validate the migration result**
+4. **Update the application code**
+5. **Delete the old data**
 
-##### 监控指标
+##### Monitoring Metrics
 
-- 查询延迟
-- 吞吐量
-- 错误率
-- 成本
+- Query latency
+- Throughput
+- Error rate
+- Cost
 
-##### 重构优势
+##### Refactoring Benefits
 
-✅ **极简设计** - 最少的字段和索引  
-✅ **成本优化** - 减少存储和写入开销  
-✅ **性能提升** - 简化查询逻辑  
-✅ **易于维护** - 减少代码复杂度  
-✅ **可扩展性** - 为未来增长预留空间
+✅ **Minimal design** - The fewest fields and indexes  
+✅ **Cost optimization** - Reduced storage and write overhead  
+✅ **Performance improvement** - Simplified query logic  
+✅ **Easy to maintain** - Reduced code complexity  
+✅ **Scalability** - Room reserved for future growth
 
-### 前端应用 (client/)
-- **Angular 14**: 现代化Web应用框架
-- **TypeScript**: 类型安全的JavaScript
-- **Angular Material**: UI组件库
-- **AWS Amplify**: 前端集成AWS服务
+### Frontend Application (client/)
+- **Angular 20**: Modern web application framework (standalone components, Material M3 theming)
+- **TypeScript 5.8**: Type-safe JavaScript
+- **Angular Material**: UI component library
+- **AWS Amplify v6** + **@aws-amplify/ui-angular 5**: Frontend integration with AWS services (authentication UI)
 
-## 项目结构
+## Project Structure
 
 ```
 Lab6/
-├── server/                          # 后端服务
-│   ├── shared-template.yaml         # 共享资源CloudFormation模板
-│   ├── tenant-template.yaml         # 租户资源CloudFormation模板
-│   ├── ProductService/              # 产品管理服务
-│   ├── OrderService/                # 订单管理服务
-│   ├── TenantManagementService/     # 租户管理服务
-│   ├── Auth/                        # 授权器和共享资源
-│   ├── layers/                      # Lambda层依赖
-│   ├── nested_templates/            # 嵌套CloudFormation模板
-│   ├── custom_resources/            # 自定义资源
-│   └── TenantPipeline/              # 租户部署管道(CDK)
-├── client/                          # 前端应用
-│   ├── Admin/                       # 系统管理员界面
-│   ├── Application/                 # 租户应用界面
-│   └── Landing/                     # 着陆页面
-└── scripts/                         # 部署和测试脚本
+├── server/                          # Backend services
+│   ├── shared-template.yaml         # Shared resources CloudFormation template
+│   ├── tenant-template.yaml         # Tenant resources CloudFormation template
+│   ├── ProductService/              # Product management service
+│   ├── OrderService/                # Order management service
+│   ├── TenantManagementService/     # Tenant management service
+│   ├── Auth/                        # Authorizer and shared resources
+│   ├── layers/                      # Lambda layer dependencies
+│   ├── nested_templates/            # Nested CloudFormation templates
+│   ├── custom_resources/            # Custom resources
+│   └── TenantPipeline/              # Tenant deployment pipeline (CDK)
+├── client/                          # Frontend application
+│   ├── Admin/                       # System administrator interface
+│   ├── Application/                 # Tenant application interface
+│   └── Landing/                     # Landing page
+└── scripts/                         # Deployment and test scripts
 ```
 
-## 核心服务说明
+## Core Services
 
-### 1. 产品服务 (ProductService)
-- 产品的CRUD操作
-- 支持多租户数据隔离
-- 集成监控和日志记录
+### 1. Product Service (ProductService)
+- CRUD operations for products
+- Supports multi-tenant data isolation
+- Integrates monitoring and logging
 
-### 2. 订单服务 (OrderService)
-- 订单的CRUD操作
-- 订单产品关联管理
-- 租户级别的数据访问控制
+### 2. Order Service (OrderService)
+- CRUD operations for orders
+- Order-product association management
+- Tenant-level data access control
 
-### 3. 租户管理服务 (TenantManagementService)
-- 租户注册和配置
-- 租户激活/停用
-- 用户管理和权限控制
-- 租户资源供应
+### 3. Tenant Management Service (TenantManagementService)
+- Tenant registration and configuration
+- Tenant activation/deactivation
+- User management and permission control
+- Tenant resource provisioning
 
-### 4. 前端应用
-- **Admin**: 系统管理员控制台，管理租户和用户
-- **Application**: 租户业务应用，管理产品和订单
-- **Landing**: 租户注册和登录页面
+### 4. Frontend Application
+- **Admin**: System administrator console for managing tenants and users
+- **Application**: Tenant business application for managing products and orders
+- **Landing**: Tenant registration and login page
 
-## 平台租户管理实现
+## Platform Tenant Management Implementation
 
-### 🏗️ 核心架构
+### 🏗️ Core Architecture
 
-#### 数据存储层
+#### Data Storage Layer
 ```yaml
-# 四个核心DynamoDB表
-- ServerlessSaaS-TenantDetails      # 租户基本信息
-- ServerlessSaaS-TenantStackMapping # 租户与基础设施映射
-- ServerlessSaaS-TenantUserMapping  # 租户用户映射
-- ServerlessSaaS-Settings           # 系统配置
+# Four core DynamoDB tables
+- ServerlessSaaS-TenantDetails      # Basic tenant information
+- ServerlessSaaS-TenantStackMapping # Tenant-to-infrastructure mapping
+- ServerlessSaaS-TenantUserMapping  # Tenant-user mapping
+- ServerlessSaaS-Settings           # System configuration
 ```
 
-#### 服务层
-- **租户注册服务** (`tenant-registration.py`)
-- **租户供应服务** (`tenant-provisioning.py`) 
-- **租户管理服务** (`tenant-management.py`)
-- **用户管理服务** (`user-management.py`)
+#### Service Layer
+- **Tenant registration service** (`tenant-registration.py`)
+- **Tenant provisioning service** (`tenant-provisioning.py`) 
+- **Tenant management service** (`tenant-management.py`)
+- **User management service** (`user-management.py`)
 
-### 🔄 租户生命周期管理
+### 🔄 Tenant Lifecycle Management
 
-#### 租户注册流程
+#### Tenant Registration Flow
 ```python
 def register_tenant(event, context):
-    # 1. 生成租户ID和API密钥
+    # 1. Generate tenant ID and API key
     tenant_id = uuid.uuid1().hex
     api_key = get_api_key_by_tier(tenant_tier)
     
-    # 2. 创建租户管理员用户
+    # 2. Create the tenant admin user
     create_user_response = __create_tenant_admin_user(tenant_details)
     
-    # 3. 创建租户记录
+    # 3. Create the tenant record
     create_tenant_response = __create_tenant(tenant_details)
     
-    # 4. 专用租户需要供应基础设施
+    # 4. Dedicated tenants need infrastructure provisioning
     if dedicatedTenancy == 'TRUE':
         provision_tenant_response = __provision_tenant(tenant_details)
 ```
 
-#### 租户供应机制
+#### Tenant Provisioning Mechanism
 ```python
 def provision_tenant(event, context):
-    # 1. 记录租户与CloudFormation栈映射
+    # 1. Record the tenant-to-CloudFormation-stack mapping
     table_tenant_stack_mapping.put_item({
         'tenantId': tenant_id,
         'stackName': f'stack-{tenant_id}',
         'applyLatestRelease': True
     })
     
-    # 2. 触发CodePipeline部署专用基础设施
+    # 2. Trigger CodePipeline to deploy dedicated infrastructure
     codepipeline.start_pipeline_execution(
         name='serverless-saas-pipeline'
     )
 ```
 
-### 👥 用户管理机制
+### 👥 User Management Mechanism
 
-#### 多租户用户池策略
-- **池化租户**: 共享Cognito用户池
-- **专用租户**: 独立Cognito用户池
+#### Multi-tenant User Pool Strategy
+- **Pooled tenants**: Shared Cognito user pool
+- **Dedicated tenants**: Independent Cognito user pool
 
-#### 用户创建流程
+#### User Creation Flow
 ```python
 def create_tenant_admin_user(event, context):
     if dedicatedTenancy == 'true':
-        # 创建专用用户池
+        # Create a dedicated user pool
         user_pool = create_user_pool(tenant_id)
         app_client = create_user_pool_client(user_pool_id)
     else:
-        # 使用共享用户池
+        # Use the shared user pool
         user_pool_id = TENANT_USER_POOL_ID
         
-    # 创建租户组和管理员用户
+    # Create the tenant group and admin user
     create_user_group(user_pool_id, tenant_id)
     create_tenant_admin(user_pool_id, tenant_admin_user_name)
 ```
 
-#### 租户信息关联机制
+#### Tenant Information Association Mechanism
 
-##### 🔗 核心关联字段
+##### 🔗 Core Association Field
 
-**租户ID (tenantId)**:
-- **作用**: 作为所有关联关系的唯一标识符
-- **格式**: UUID格式的字符串 (如: `abc123-def456-ghi789`)
-- **生成**: 在租户注册时通过 `uuid.uuid1().hex` 生成
+**Tenant ID (tenantId)**:
+- **Purpose**: Serves as the unique identifier for all associations
+- **Format**: A UUID-format string (e.g., `abc123-def456-ghi789`)
+- **Generation**: Generated via `uuid.uuid1().hex` during tenant registration
 
-##### 📊 关联关系架构
+##### 📊 Association Architecture
 
-**Cognito用户池 ↔ DynamoDB关联**:
+**Cognito User Pool ↔ DynamoDB Association**:
 ```python
-# 租户注册时的关联建立
+# Establishing associations during tenant registration
 def create_tenant_admin_user(event, context):
     tenant_details = json.loads(event['body'])
-    tenant_id = tenant_details['tenantId']  # 核心关联字段
+    tenant_id = tenant_details['tenantId']  # Core association field
     
-    # 1. 创建或选择用户池
+    # 1. Create or select a user pool
     if (tenant_details['dedicatedTenancy'] == 'true'):
         user_pool_response = user_mgmt.create_user_pool(tenant_id)
         user_pool_id = user_pool_response['UserPool']['Id']
     else:
         user_pool_id = tenant_user_pool_id
     
-    # 2. 在DynamoDB中存储租户配置
+    # 2. Store the tenant configuration in DynamoDB
     tenant_config = {
         'tenantId': tenant_id,
-        'userPoolId': user_pool_id,  # 关联字段
+        'userPoolId': user_pool_id,  # Association field
         'appClientId': app_client_id,
         'apiGatewayUrl': api_gateway_url,
         'apiKey': api_key
     }
     
-    # 3. 在Cognito中创建用户时设置租户属性
+    # 3. Set tenant attributes when creating the user in Cognito
     create_tenant_admin_response = user_mgmt.create_tenant_admin(
         user_pool_id, 
         tenant_admin_user_name, 
@@ -289,21 +292,21 @@ def create_tenant_admin_user(event, context):
     )
 ```
 
-**用户 ↔ 租户关联**:
+**User ↔ Tenant Association**:
 ```python
-# 用户创建时的关联建立
+# Establishing associations during user creation
 def create_user(event, context):
-    # 1. 从授权器获取当前租户信息
+    # 1. Get the current tenant info from the authorizer
     tenant_id = event['requestContext']['authorizer']['tenantId']
     user_pool_id = event['requestContext']['authorizer']['userPoolId']
     
-    # 2. 在Cognito中创建用户时设置租户属性
+    # 2. Set tenant attributes when creating the user in Cognito
     response = client.admin_create_user(
         Username=user_details['userName'],
         UserPoolId=user_pool_id,
         UserAttributes=[
             {
-                'Name': 'custom:tenantId',  # 关键关联属性
+                'Name': 'custom:tenantId',  # Key association attribute
                 'Value': tenant_id
             },
             {
@@ -313,49 +316,49 @@ def create_user(event, context):
         ]
     )
     
-    # 3. 在DynamoDB中创建用户-租户映射
+    # 3. Create the user-tenant mapping in DynamoDB
     user_mgmt.create_user_tenant_mapping(user_details['userName'], tenant_id)
 ```
 
-##### 🔍 关联查询流程
+##### 🔍 Association Query Flow
 
-**从Cognito到DynamoDB的查询**:
+**Querying from Cognito to DynamoDB**:
 ```python
 def get_users(event, context):
     tenant_id = event['requestContext']['authorizer']['tenantId']
     user_pool_id = event['requestContext']['authorizer']['userPoolId']
     
-    # 1. 从Cognito获取用户列表
+    # 1. Get the user list from Cognito
     response = client.list_users(UserPoolId=user_pool_id)
     
-    # 2. 通过custom:tenantId属性过滤同租户用户
+    # 2. Filter users of the same tenant via the custom:tenantId attribute
     for user in response['Users']:
         for attr in user["Attributes"]:
             if(attr["Name"] == "custom:tenantId" and attr["Value"] == tenant_id):
-                # 找到同租户用户
+                # Found a user of the same tenant
                 user_info = UserInfo()
-                user_info.tenant_id = attr["Value"]  # 关联字段
+                user_info.tenant_id = attr["Value"]  # Association field
                 user_info.user_name = user["Username"]
                 users.append(user_info)
 ```
 
-**从DynamoDB到Cognito的查询**:
+**Querying from DynamoDB to Cognito**:
 ```python
 def get_user_info(event, user_pool_id, user_name):
-    # 1. 从Cognito获取用户详细信息
+    # 1. Get the user details from Cognito
     response = client.admin_get_user(
         UserPoolId=user_pool_id,
         Username=user_name
     )
     
-    # 2. 提取租户ID
+    # 2. Extract the tenant ID
     user_info = UserInfo()
     for attr in response["UserAttributes"]:
         if(attr["Name"] == "custom:tenantId"):
-            user_info.tenant_id = attr["Value"]  # 关联字段
+            user_info.tenant_id = attr["Value"]  # Association field
             break
     
-    # 3. 可以通过tenant_id查询DynamoDB中的租户详情
+    # 3. The tenant details in DynamoDB can be queried via tenant_id
     tenant_details = table_tenant_details.get_item(
         Key={'tenantId': user_info.tenant_id}
     )
@@ -363,44 +366,44 @@ def get_user_info(event, user_pool_id, user_name):
     return user_info
 ```
 
-##### 📋 数据表关联结构
+##### 📋 Data Table Association Structure
 
-**TenantDetails表**:
+**TenantDetails Table**:
 ```yaml
-# 存储租户配置信息
+# Stores tenant configuration information
 TenantDetailsTable:
   KeySchema:
-    - AttributeName: tenantId  # 主键
+    - AttributeName: tenantId  # Primary key
       KeyType: HASH
   Attributes:
-    - tenantId: "abc123"       # 关联字段
-    - userPoolId: "us-east-1_xxxxxxxxx"  # Cognito用户池ID
+    - tenantId: "abc123"       # Association field
+    - userPoolId: "us-east-1_xxxxxxxxx"  # Cognito user pool ID
     - appClientId: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
     - apiGatewayUrl: "https://abc123.execute-api.us-east-1.amazonaws.com/prod/"
     - apiKey: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
-**TenantUserMapping表**:
+**TenantUserMapping Table**:
 ```yaml
-# 存储用户-租户映射关系
+# Stores the user-tenant mapping relationship
 TenantUserMappingTable:
   KeySchema:
-    - AttributeName: tenantId   # 分区键
+    - AttributeName: tenantId   # Partition key
       KeyType: HASH
-    - AttributeName: userName   # 排序键
+    - AttributeName: userName   # Sort key
       KeyType: RANGE
   Attributes:
-    - tenantId: "abc123"        # 关联字段
+    - tenantId: "abc123"        # Association field
     - userName: "tenant-admin-abc123"
 ```
 
-**Cognito用户属性**:
+**Cognito User Attributes**:
 ```json
 {
   "Username": "tenant-admin-abc123",
   "UserAttributes": [
     {
-      "Name": "custom:tenantId",    // 关键关联属性
+      "Name": "custom:tenantId",    // Key association attribute
       "Value": "abc123"
     },
     {
@@ -415,140 +418,140 @@ TenantUserMappingTable:
 }
 ```
 
-##### 🔧 关联维护机制
+##### 🔧 Association Maintenance Mechanism
 
-**租户注册时的关联建立**:
+**Establishing associations during tenant registration**:
 ```python
 def register_tenant(event, context):
-    # 1. 生成租户ID
+    # 1. Generate the tenant ID
     tenant_id = uuid.uuid1().hex
     
-    # 2. 创建租户管理员用户
+    # 2. Create the tenant admin user
     create_user_response = __create_tenant_admin_user(tenant_details)
     
-    # 3. 创建租户记录
+    # 3. Create the tenant record
     create_tenant_response = __create_tenant(tenant_details)
     
-    # 4. 专用租户需要供应基础设施
+    # 4. Dedicated tenants need infrastructure provisioning
     if dedicatedTenancy == 'TRUE':
         provision_tenant_response = __provision_tenant(tenant_details)
 ```
 
-**用户创建时的关联维护**:
+**Maintaining associations during user creation**:
 ```python
 def create_user_tenant_mapping(self, user_name, tenant_id):
-    # 确保用户创建后立即建立映射关系
+    # Ensure the mapping is established immediately after the user is created
     response = table_tenant_user_map.put_item(
         Item={
-            'tenantId': tenant_id,    # 关联字段
+            'tenantId': tenant_id,    # Association field
             'userName': user_name
         }
     )
     return response
 ```
 
-**用户查询时的关联验证**:
+**Validating associations during user queries**:
 ```python
 def get_user(event, context):
     tenant_id = event['requestContext']['authorizer']['tenantId']
     user_name = event['pathParameters']['username']
     
-    # 1. 从Cognito获取用户信息
+    # 1. Get user info from Cognito
     user_info = get_user_info(event, user_pool_id, user_name)
     
-    # 2. 验证租户关联
+    # 2. Validate the tenant association
     if(not auth_manager.isSystemAdmin(user_role) and user_info.tenant_id != tenant_id):
         return utils.create_unauthorized_response()
 ```
 
-##### 🛡️ 关联安全性
+##### 🛡️ Association Security
 
-**授权器中的关联验证**:
+**Association validation in the authorizer**:
 ```python
 def lambda_handler(event, context):
-    # 1. 从JWT Token中提取租户ID
+    # 1. Extract the tenant ID from the JWT token
     unauthorized_claims = jwt.get_unverified_claims(jwt_bearer_token)
     tenant_id = unauthorized_claims['custom:tenantId']
     
-    # 2. 查询租户详情验证关联
+    # 2. Query the tenant details to validate the association
     tenant_details = table_tenant_details.get_item(
         Key={'tenantId': tenant_id}
     )
     
-    # 3. 使用租户的用户池验证Token
+    # 3. Use the tenant's user pool to validate the token
     userpool_id = tenant_details['Item']['userPoolId']
     appclient_id = tenant_details['Item']['appClientId']
     
-    # 4. 验证JWT Token
+    # 4. Validate the JWT token
     response = validateJWT(jwt_bearer_token, appclient_id, keys)
 ```
 
-**数据一致性保证**:
-- **原子操作**: 用户创建时同时更新Cognito和DynamoDB
-- **事务性**: 确保关联关系的完整性
-- **验证机制**: 通过授权器验证租户关联的有效性
+**Data consistency guarantees**:
+- **Atomic operations**: Both Cognito and DynamoDB are updated when a user is created
+- **Transactionality**: Ensures the integrity of the associations
+- **Validation mechanism**: The authorizer validates the validity of the tenant association
 
-##### ⚡ 关联查询优化
+##### ⚡ Association Query Optimization
 
-**索引优化**:
+**Index optimization**:
 ```yaml
 TenantUserMappingTable:
   GlobalSecondaryIndexes: 
     - IndexName: UserName
       KeySchema: 
-        - AttributeName: userName    # 支持按用户名查询
+        - AttributeName: userName    # Supports querying by user name
           KeyType: HASH
-        - AttributeName: tenantId    # 支持按租户ID查询
+        - AttributeName: tenantId    # Supports querying by tenant ID
           KeyType: RANGE
 ```
 
-**缓存机制**:
-- **Lambda授权器缓存**: 减少重复的租户信息查询
-- **用户信息缓存**: 缓存常用的用户信息
-- **租户配置缓存**: 缓存租户的配置信息
+**Caching mechanism**:
+- **Lambda authorizer cache**: Reduces repeated tenant information lookups
+- **User information cache**: Caches frequently used user information
+- **Tenant configuration cache**: Caches tenant configuration information
 
-##### 📈 关联关系总结
+##### 📈 Association Summary
 
-| 组件 | 关联字段 | 关联方式 | 作用 |
+| Component | Association Field | Association Method | Purpose |
 |------|----------|----------|------|
-| **Cognito用户** | `custom:tenantId` | 用户属性 | 标识用户所属租户 |
-| **TenantDetails** | `tenantId` | 主键 | 存储租户配置信息 |
-| **TenantUserMapping** | `tenantId + userName` | 复合键 | 建立用户-租户映射 |
-| **授权器** | `custom:tenantId` | JWT声明 | 验证用户租户权限 |
+| **Cognito User** | `custom:tenantId` | User attribute | Identifies the tenant a user belongs to |
+| **TenantDetails** | `tenantId` | Primary key | Stores tenant configuration information |
+| **TenantUserMapping** | `tenantId + userName` | Composite key | Establishes the user-tenant mapping |
+| **Authorizer** | `custom:tenantId` | JWT claim | Validates the user's tenant permissions |
 
-这种关联机制确保了：
-- **数据一致性**: 通过统一的租户ID关联所有相关数据
-- **安全性**: 通过多层验证确保租户数据隔离
-- **性能**: 通过索引和缓存优化查询性能
-- **可扩展性**: 支持池化和专用两种多租户模式
+This association mechanism ensures:
+- **Data consistency**: All related data is associated through a unified tenant ID
+- **Security**: Multi-layer validation ensures tenant data isolation
+- **Performance**: Indexes and caching optimize query performance
+- **Scalability**: Supports both pooled and dedicated multi-tenant models
 
-### 🔐 权限控制机制
+### 🔐 Permission Control Mechanism
 
-#### 角色层次
+#### Role Hierarchy
 ```python
-# 权限等级（从高到低）
-- SystemAdmin    # 系统管理员
-- TenantAdmin    # 租户管理员  
-- TenantUser     # 租户用户
+# Permission levels (highest to lowest)
+- SystemAdmin    # System administrator
+- TenantAdmin    # Tenant administrator  
+- TenantUser     # Tenant user
 ```
 
-#### 访问控制逻辑
+#### Access Control Logic
 ```python
 def update_tenant(event, context):
     requesting_tenant_id = event['requestContext']['authorizer']['tenantId']
     user_role = event['requestContext']['authorizer']['userRole']
     
-    # 权限检查：租户管理员只能管理自己的租户，系统管理员可管理所有租户
+    # Permission check: tenant admins can only manage their own tenant; system admins can manage all tenants
     if ((auth_manager.isTenantAdmin(user_role) and tenant_id == requesting_tenant_id) 
         or auth_manager.isSystemAdmin(user_role)):
-        # 执行更新操作
+        # Perform the update operation
     else:
         return utils.create_unauthorized_response()
 ```
 
-### 🎯 服务等级管理
+### 🎯 Service Tier Management
 
-#### API密钥分配
+#### API Key Assignment
 ```python
 def __getApiKey(tenant_tier):
     tier_mapping = {
@@ -560,48 +563,48 @@ def __getApiKey(tenant_tier):
     return tier_mapping.get(tenant_tier.upper())
 ```
 
-#### 租户隔离策略
-- **Platinum**: 专用基础设施 (Silo模式)
-- **Premium/Standard/Basic**: 共享基础设施 (Pool模式)
+#### Tenant Isolation Strategy
+- **Platinum**: Dedicated infrastructure (Silo model)
+- **Premium/Standard/Basic**: Shared infrastructure (Pool model)
 
-### 🔄 租户状态管理
+### 🔄 Tenant State Management
 
-#### 激活/停用机制
+#### Activation/Deactivation Mechanism
 ```python
 def deactivate_tenant(event, context):
-    # 1. 更新租户状态
+    # 1. Update the tenant state
     table_tenant_details.update_item(
         UpdateExpression="set isActive = :isActive",
         ExpressionAttributeValues={':isActive': False}
     )
     
-    # 2. 专用租户需要销毁基础设施
+    # 2. Dedicated tenants need infrastructure destruction
     if dedicatedTenancy == "TRUE":
         invoke_deprovision_tenant(tenant_id)
     
-    # 3. 禁用所有租户用户
+    # 3. Disable all tenant users
     invoke_disable_users(tenant_id)
 ```
 
-### 🎯 关键特性
+### 🎯 Key Features
 
-1. **动态资源供应**: 根据租户等级自动分配资源
-2. **细粒度权限控制**: 基于角色的多层次访问控制
-3. **自动化生命周期**: 从注册到销毁的全自动化流程
-4. **监控和审计**: 完整的操作日志和指标记录
-5. **弹性扩展**: 支持池化和专用两种隔离模式
+1. **Dynamic resource provisioning**: Automatically allocates resources based on tenant tier
+2. **Fine-grained permission control**: Role-based, multi-level access control
+3. **Automated lifecycle**: A fully automated flow from registration to teardown
+4. **Monitoring and auditing**: Complete operation logs and metric records
+5. **Elastic scaling**: Supports both pooled and dedicated isolation models
 
-## Admin相关接口配置关系分析（以Create Tenant Admin User 接口配置为例）
+## Analysis of Admin Interface Configuration Relationships (Using the Create Tenant Admin User Interface as an Example)
 
-### 📋 接口概述
+### 📋 Interface Overview
 
-`Create Tenant Admin User` 接口是租户注册流程中的关键组件，负责为每个新租户创建管理员用户。该接口采用AWS SigV4签名认证，确保只有授权的系统组件可以调用。
+The `Create Tenant Admin User` interface is a key component of the tenant registration flow, responsible for creating an administrator user for each new tenant. The interface uses AWS SigV4 signature authentication to ensure that only authorized system components can invoke it.
 
-### 🔧 配置关系详解
+### 🔧 Detailed Configuration Relationships
 
-#### 1. API Gateway 端点定义
+#### 1. API Gateway Endpoint Definition
 
-**配置文件**: `server/nested_templates/apigateway.yaml`
+**Configuration file**: `server/nested_templates/apigateway.yaml`
 
 ```yaml
 /user/tenant-admin:
@@ -612,7 +615,7 @@ def deactivate_tenant(event, context):
       - application/json
     responses: {}
     security:
-      - sigv4Reference: []  # 使用AWS SigV4签名认证
+      - sigv4Reference: []  # Uses AWS SigV4 signature authentication
     x-amazon-apigateway-integration:
       uri: !Join
         - ''
@@ -623,15 +626,15 @@ def deactivate_tenant(event, context):
       type: aws_proxy
 ```
 
-**关键配置**:
-- **URI路径**: `/user/tenant-admin`
-- **HTTP方法**: `POST`
-- **认证方式**: `sigv4Reference` (AWS SigV4签名)
-- **集成类型**: `aws_proxy` (Lambda代理集成)
+**Key configuration**:
+- **URI path**: `/user/tenant-admin`
+- **HTTP method**: `POST`
+- **Authentication method**: `sigv4Reference` (AWS SigV4 signature)
+- **Integration type**: `aws_proxy` (Lambda proxy integration)
 
-#### 2. Lambda 函数定义
+#### 2. Lambda Function Definition
 
-**配置文件**: `server/nested_templates/lambdafunctions.yaml`
+**Configuration file**: `server/nested_templates/lambdafunctions.yaml`
 
 ```yaml
 CreateTenantAdminUserFunction:
@@ -653,16 +656,16 @@ CreateTenantAdminUserFunction:
         POWERTOOLS_SERVICE_NAME: "UserManagement.CreateTenantAdmin"
 ```
 
-**关键配置**:
-- **函数名**: `CreateTenantAdminUserFunction`
-- **代码路径**: `../TenantManagementService/`
-- **处理函数**: `user-management.create_tenant_admin_user`
-- **运行时**: `python3.13`
-- **IAM角色**: `CreateUserLambdaExecutionRole`
+**Key configuration**:
+- **Function name**: `CreateTenantAdminUserFunction`
+- **Code path**: `../TenantManagementService/`
+- **Handler function**: `user-management.create_tenant_admin_user`
+- **Runtime**: `python3.13`
+- **IAM role**: `CreateUserLambdaExecutionRole`
 
-#### 3. Lambda 权限配置
+#### 3. Lambda Permission Configuration
 
-**配置文件**: `server/nested_templates/apigateway_lambdapermissions.yaml`
+**Configuration file**: `server/nested_templates/apigateway_lambdapermissions.yaml`
 
 ```yaml
 CreateTenantAdminUserLambdaApiGatewayExecutionPermission:
@@ -674,15 +677,15 @@ CreateTenantAdminUserLambdaApiGatewayExecutionPermission:
     SourceArn: !Join ["", ["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Ref AdminApiGatewayApi, "/*/*/*" ]]
 ```
 
-**关键配置**:
-- **权限类型**: `AWS::Lambda::Permission`
-- **允许的操作**: `lambda:InvokeFunction`
-- **主体**: `apigateway.amazonaws.com`
-- **源ARN**: API Gateway的完整ARN
+**Key configuration**:
+- **Permission type**: `AWS::Lambda::Permission`
+- **Allowed action**: `lambda:InvokeFunction`
+- **Principal**: `apigateway.amazonaws.com`
+- **Source ARN**: The full ARN of the API Gateway
 
-#### 4. 资源策略限制
+#### 4. Resource Policy Restriction
 
-**配置文件**: `server/nested_templates/apigateway.yaml`
+**Configuration file**: `server/nested_templates/apigateway.yaml`
 
 ```yaml
 - Effect: Deny
@@ -700,14 +703,14 @@ CreateTenantAdminUserLambdaApiGatewayExecutionPermission:
         - !Ref TenantManagementLambdaExecutionRoleArn
 ```
 
-**关键配置**:
-- **拒绝策略**: 默认拒绝所有访问
-- **例外条件**: 只有特定的IAM角色可以访问
-- **资源路径**: `execute-api:/{stage}/POST/user/tenant-admin`
+**Key configuration**:
+- **Deny policy**: Denies all access by default
+- **Exception condition**: Only specific IAM roles can access
+- **Resource path**: `execute-api:/{stage}/POST/user/tenant-admin`
 
-#### 5. 环境变量配置
+#### 5. Environment Variable Configuration
 
-**配置文件**: `server/nested_templates/lambdafunctions.yaml`
+**Configuration file**: `server/nested_templates/lambdafunctions.yaml`
 
 ```yaml
 Environment:
@@ -715,54 +718,54 @@ Environment:
     CREATE_TENANT_ADMIN_USER_RESOURCE_PATH: "/user/tenant-admin"
 ```
 
-这个环境变量在租户注册过程中被使用，用于构建API调用URL。
+This environment variable is used during the tenant registration process to build the API call URL.
 
-### 📊 配置关系总结
+### 📊 Configuration Relationship Summary
 
-| 组件 | 配置文件 | 关键配置 | 作用 |
+| Component | Configuration File | Key Configuration | Purpose |
 |------|----------|----------|------|
-| **API端点** | `apigateway.yaml` | `/user/tenant-admin` POST | 定义HTTP接口 |
-| **Lambda函数** | `lambdafunctions.yaml` | `CreateTenantAdminUserFunction` | 业务逻辑处理 |
-| **权限控制** | `apigateway_lambdapermissions.yaml` | `CreateTenantAdminUserLambdaApiGatewayExecutionPermission` | 允许API Gateway调用Lambda |
-| **访问控制** | `apigateway.yaml` | 资源策略 | 限制只有特定角色可访问 |
-| **环境变量** | `lambdafunctions.yaml` | `CREATE_TENANT_ADMIN_USER_RESOURCE_PATH` | 提供API路径给其他函数使用 |
+| **API endpoint** | `apigateway.yaml` | `/user/tenant-admin` POST | Defines the HTTP interface |
+| **Lambda function** | `lambdafunctions.yaml` | `CreateTenantAdminUserFunction` | Handles business logic |
+| **Permission control** | `apigateway_lambdapermissions.yaml` | `CreateTenantAdminUserLambdaApiGatewayExecutionPermission` | Allows API Gateway to invoke Lambda |
+| **Access control** | `apigateway.yaml` | Resource policy | Restricts access to specific roles only |
+| **Environment variable** | `lambdafunctions.yaml` | `CREATE_TENANT_ADMIN_USER_RESOURCE_PATH` | Provides the API path for other functions to use |
 
-### 🔄 调用流程
+### 🔄 Invocation Flow
 
-1. **客户端请求** → `POST /user/tenant-admin`
-2. **API Gateway** → 验证AWS SigV4签名
-3. **资源策略** → 检查调用者IAM角色权限
-4. **Lambda权限** → 验证API Gateway调用权限
-5. **Lambda函数** → 执行 `user-management.create_tenant_admin_user`
-6. **响应返回** → 通过API Gateway返回给客户端
+1. **Client request** → `POST /user/tenant-admin`
+2. **API Gateway** → Validates the AWS SigV4 signature
+3. **Resource policy** → Checks the caller's IAM role permissions
+4. **Lambda permission** → Validates the API Gateway invocation permission
+5. **Lambda function** → Executes `user-management.create_tenant_admin_user`
+6. **Response returned** → Returned to the client via API Gateway
 
-### 🛡️ 安全特性
+### 🛡️ Security Features
 
-- **AWS SigV4签名认证**: 确保请求来源的合法性
-- **IAM角色限制**: 只有特定角色可以调用接口
-- **资源策略**: 细粒度的访问控制
-- **Lambda权限**: 最小权限原则
+- **AWS SigV4 signature authentication**: Ensures the legitimacy of the request source
+- **IAM role restriction**: Only specific roles can call the interface
+- **Resource policy**: Fine-grained access control
+- **Lambda permission**: Principle of least privilege
 
-### 🔗 与其他组件的关联
+### 🔗 Associations with Other Components
 
-- **租户注册流程**: 在租户注册过程中自动调用
-- **用户管理服务**: 创建租户管理员用户的核心逻辑
-- **Cognito集成**: 在相应的用户池中创建用户
-- **权限管理**: 为租户管理员分配适当的权限
+- **Tenant registration flow**: Automatically invoked during the tenant registration process
+- **User management service**: The core logic for creating tenant admin users
+- **Cognito integration**: Creates users in the corresponding user pool
+- **Permission management**: Assigns appropriate permissions to tenant admins
 
-这种配置确保了接口的安全性、可追溯性和正确的权限控制，是整个多租户SaaS架构中用户管理的重要组成部分。
+This configuration ensures the interface's security, traceability, and correct permission control, and is an important part of user management in the overall multi-tenant SaaS architecture.
 
-## 租户业务接口配置关系分析（以GetOrdersFunction 接口配置为例）
+## Analysis of Tenant Business Interface Configuration Relationships (Using the GetOrdersFunction Interface as an Example)
 
-### 📋 接口概述
+### 📋 Interface Overview
 
-`GetOrdersFunction` 接口是租户业务应用中的核心组件，负责获取指定租户的所有订单数据。该接口采用多租户架构设计，支持池化(Pooled)和专用(Silo)两种部署模式，并集成了API密钥认证和Lambda授权器。
+The `GetOrdersFunction` interface is a core component of the tenant business application, responsible for retrieving all order data for a specified tenant. The interface adopts a multi-tenant architecture design, supports both pooled and silo deployment models, and integrates API key authentication and a Lambda authorizer.
 
-### 🔧 配置关系详解
+### 🔧 Detailed Configuration Relationships
 
-#### 1. 租户API Gateway配置
+#### 1. Tenant API Gateway Configuration
 
-**配置文件**: `server/tenant-template.yaml`
+**Configuration file**: `server/tenant-template.yaml`
 
 ```yaml
 ApiGatewayTenantApi:
@@ -795,8 +798,8 @@ ApiGatewayTenantApi:
               - application/json
             responses: {}
             security:   
-              - api_key: []  # API密钥认证
-              - Authorizer: []  # Lambda授权器
+              - api_key: []  # API key authentication
+              - Authorizer: []  # Lambda authorizer
             x-amazon-apigateway-integration:
               uri: !Join
                 - ''
@@ -807,18 +810,18 @@ ApiGatewayTenantApi:
               type: aws_proxy
 ```
 
-**关键配置**:
-- **API名称**: 包含租户ID的动态命名
-- **API密钥源**: `AUTHORIZER` (需要授权器验证)
-- **访问日志**: 详细的请求日志记录
-- **X-Ray追踪**: 启用分布式追踪
-- **URI路径**: `/orders`
-- **HTTP方法**: `GET`
-- **认证方式**: `api_key` + `Authorizer` (双重认证)
+**Key configuration**:
+- **API name**: Dynamically named to include the tenant ID
+- **API key source**: `AUTHORIZER` (requires authorizer validation)
+- **Access logging**: Detailed request logging
+- **X-Ray tracing**: Distributed tracing enabled
+- **URI path**: `/orders`
+- **HTTP method**: `GET`
+- **Authentication method**: `api_key` + `Authorizer` (dual authentication)
 
-#### 2. Lambda 函数定义
+#### 2. Lambda Function Definition
 
-**配置文件**: `server/tenant-template.yaml`
+**Configuration file**: `server/tenant-template.yaml`
 
 ```yaml
 GetOrdersFunction:
@@ -841,17 +844,17 @@ GetOrdersFunction:
       TenantId: !Ref TenantIdParameter
 ```
 
-**关键配置**:
-- **函数名**: `GetOrdersFunction`
-- **代码路径**: `OrderService/`
-- **处理函数**: `order_service.get_orders`
-- **运行时**: `python3.13` (全局配置)
-- **IAM角色**: `OrderFunctionExecutionRole`
-- **并发控制**: 基于部署模式的条件配置
+**Key configuration**:
+- **Function name**: `GetOrdersFunction`
+- **Code path**: `OrderService/`
+- **Handler function**: `order_service.get_orders`
+- **Runtime**: `python3.13` (global configuration)
+- **IAM role**: `OrderFunctionExecutionRole`
+- **Concurrency control**: Conditional configuration based on the deployment model
 
-#### 3. Lambda 权限配置
+#### 3. Lambda Permission Configuration
 
-**配置文件**: `server/tenant-template.yaml`
+**Configuration file**: `server/tenant-template.yaml`
 
 ```yaml
 GetOrdersLambdaApiGatewayExecutionPermission:
@@ -872,15 +875,15 @@ GetOrdersLambdaApiGatewayExecutionPermission:
       ]
 ```
 
-**关键配置**:
-- **权限类型**: `AWS::Lambda::Permission`
-- **允许的操作**: `lambda:InvokeFunction`
-- **主体**: `apigateway.amazonaws.com`
-- **源ARN**: 租户API Gateway的完整ARN
+**Key configuration**:
+- **Permission type**: `AWS::Lambda::Permission`
+- **Allowed action**: `lambda:InvokeFunction`
+- **Principal**: `apigateway.amazonaws.com`
+- **Source ARN**: The full ARN of the tenant API Gateway
 
-#### 4. IAM 角色和策略
+#### 4. IAM Role and Policy
 
-**配置文件**: `server/tenant-template.yaml`
+**Configuration file**: `server/tenant-template.yaml`
 
 ```yaml
 OrderFunctionExecutionRole:
@@ -923,14 +926,14 @@ OrderFunctionExecutionRolePolicy:
             - !GetAtt OrderTable.Arn
 ```
 
-**关键配置**:
-- **角色名**: 包含租户ID的动态命名
-- **托管策略**: CloudWatch、Lambda基础执行、X-Ray写入权限
-- **自定义策略**: 仅在专用部署模式下创建，提供DynamoDB访问权限
+**Key configuration**:
+- **Role name**: Dynamically named to include the tenant ID
+- **Managed policies**: CloudWatch, Lambda basic execution, and X-Ray write permissions
+- **Custom policy**: Created only in dedicated deployment mode, providing DynamoDB access
 
-#### 5. 数据存储配置
+#### 5. Data Storage Configuration
 
-**配置文件**: `server/tenant-template.yaml`
+**Configuration file**: `server/tenant-template.yaml`
 
 ```yaml
 OrderTable:
@@ -955,158 +958,158 @@ OrderTable:
         Value: !Ref TenantIdParameter
 ```
 
-**关键配置**:
-- **表名**: 包含租户ID的动态命名 (`Order-{tenantId}`)
-- **分区键**: `shardId` (用于多租户数据隔离)
-- **排序键**: `orderId` (订单唯一标识)
-- **标签**: 包含租户ID用于资源管理
+**Key configuration**:
+- **Table name**: Dynamically named to include the tenant ID (`Order-{tenantId}`)
+- **Partition key**: `shardId` (used for multi-tenant data isolation)
+- **Sort key**: `orderId` (unique order identifier)
+- **Tags**: Include the tenant ID for resource management
 
-### 📊 配置关系总结
+### 📊 Configuration Relationship Summary
 
-| 组件 | 配置文件 | 关键配置 | 作用 |
+| Component | Configuration File | Key Configuration | Purpose |
 |------|----------|----------|------|
-| **租户API Gateway** | `tenant-template.yaml` | `ApiGatewayTenantApi` | 创建租户专用API网关 |
-| **API端点定义** | `tenant-template.yaml` | `DefinitionBody.paths` | 定义具体的API路由 |
-| **Lambda函数** | `tenant-template.yaml` | `GetOrdersFunction` | 业务逻辑处理 |
-| **权限控制** | `tenant-template.yaml` | `GetOrdersLambdaApiGatewayExecutionPermission` | API Gateway调用权限 |
-| **IAM角色** | `tenant-template.yaml` | `OrderFunctionExecutionRole` | Lambda执行权限 |
-| **数据存储** | `tenant-template.yaml` | `OrderTable` | 订单数据存储 |
+| **Tenant API Gateway** | `tenant-template.yaml` | `ApiGatewayTenantApi` | Creates a tenant-dedicated API gateway |
+| **API endpoint definition** | `tenant-template.yaml` | `DefinitionBody.paths` | Defines the specific API routes |
+| **Lambda function** | `tenant-template.yaml` | `GetOrdersFunction` | Handles business logic |
+| **Permission control** | `tenant-template.yaml` | `GetOrdersLambdaApiGatewayExecutionPermission` | API Gateway invocation permission |
+| **IAM role** | `tenant-template.yaml` | `OrderFunctionExecutionRole` | Lambda execution permissions |
+| **Data storage** | `tenant-template.yaml` | `OrderTable` | Order data storage |
 
-### 🔄 调用流程
+### 🔄 Invocation Flow
 
-1. **客户端请求** → `GET /orders`
-2. **API Gateway** → 验证API密钥
-3. **Lambda授权器** → 验证用户身份和租户权限
-4. **Lambda权限** → 验证API Gateway调用权限
-5. **Lambda函数** → 执行 `order_service.get_orders`
-6. **DynamoDB查询** → 根据租户ID查询订单数据
-7. **响应返回** → 通过API Gateway返回给客户端
+1. **Client request** → `GET /orders`
+2. **API Gateway** → Validates the API key
+3. **Lambda authorizer** → Validates user identity and tenant permissions
+4. **Lambda permission** → Validates the API Gateway invocation permission
+5. **Lambda function** → Executes `order_service.get_orders`
+6. **DynamoDB query** → Queries order data by tenant ID
+7. **Response returned** → Returned to the client via API Gateway
 
-### 🛡️ 安全特性
+### 🛡️ Security Features
 
-- **API密钥认证**: 确保请求来源的合法性
-- **Lambda授权器**: 验证用户身份和租户权限
-- **IAM角色限制**: 最小权限原则
-- **多租户数据隔离**: 通过分区键实现数据隔离
-- **资源标签**: 便于资源管理和成本分配
+- **API key authentication**: Ensures the legitimacy of the request source
+- **Lambda authorizer**: Validates user identity and tenant permissions
+- **IAM role restriction**: Principle of least privilege
+- **Multi-tenant data isolation**: Achieves data isolation via the partition key
+- **Resource tags**: Facilitate resource management and cost allocation
 
-### 🔗 多租户特性
+### 🔗 Multi-tenant Features
 
-- **动态资源命名**: 所有资源名称都包含租户ID
-- **条件部署**: 根据租户类型(池化/专用)调整配置
-- **数据隔离**: 通过DynamoDB分区键实现租户数据隔离
-- **独立API Gateway**: 每个租户有独立的API Gateway实例
+- **Dynamic resource naming**: All resource names include the tenant ID
+- **Conditional deployment**: Adjusts configuration based on tenant type (pooled/dedicated)
+- **Data isolation**: Achieves tenant data isolation via the DynamoDB partition key
+- **Independent API Gateway**: Each tenant has an independent API Gateway instance
 
-### 🎯 与Admin接口的对比
+### 🎯 Comparison with the Admin Interface
 
-| 特性 | Admin接口 | 租户接口 |
+| Feature | Admin Interface | Tenant Interface |
 |------|-----------|----------|
-| **API Gateway** | 共享管理API | 租户专用API |
-| **认证方式** | AWS SigV4签名 | API密钥 + Lambda授权器 |
-| **访问控制** | IAM角色限制 | 租户级别权限控制 |
-| **数据范围** | 全局管理 | 租户隔离数据 |
-| **部署模式** | 共享资源 | 动态租户资源 |
+| **API Gateway** | Shared management API | Tenant-dedicated API |
+| **Authentication method** | AWS SigV4 signature | API key + Lambda authorizer |
+| **Access control** | IAM role restriction | Tenant-level permission control |
+| **Data scope** | Global management | Tenant-isolated data |
+| **Deployment model** | Shared resources | Dynamic tenant resources |
 
-这种配置确保了租户数据的完全隔离，同时提供了灵活的部署模式和强大的安全控制，是多租户SaaS架构中业务服务的典型实现。
+This configuration ensures complete isolation of tenant data while providing flexible deployment models and strong security controls, making it a typical implementation of business services in a multi-tenant SaaS architecture.
 
-## 部署指南
+## Deployment Guide
 
-### 前置条件
-- AWS CLI 已配置
-- AWS SAM CLI 已安装
-- Node.js 14+ 已安装
-- Docker 已安装（用于SAM构建）
+### Prerequisites
+- AWS CLI configured
+- AWS SAM CLI installed
+- Node.js 20.19+ or 22.12+ installed (required by Angular 20)
+- Docker installed (used for SAM builds)
 
-### 1. 部署共享资源
+### 1. Deploy Shared Resources
 ```bash
 cd server
 sam build -t shared-template.yaml --use-container
 sam deploy --config-file shared-samconfig.toml
 ```
 
-### 2. 部署租户资源
+### 2. Deploy Tenant Resources
 ```bash
 sam build -t tenant-template.yaml --use-container
 sam deploy --config-file tenant-samconfig.toml
 ```
 
-### 3. 部署前端应用
+### 3. Deploy the Frontend Applications
 ```bash
-# 管理员应用
+# Admin application
 cd client/Admin
 npm install
 npm run build
 
-# 租户应用
+# Tenant application
 cd ../Application
 npm install
 npm run build
 
-# 着陆页面
+# Landing page
 cd ../Landing
 npm install
 npm run build
 ```
 
-### 4. 配置和测试
+### 4. Configure and Test
 ```bash
 cd ../../scripts
 ./deployment.sh
 ./geturl.sh
 ```
 
-## 租户隔离模式
+## Tenant Isolation Models
 
-### 池化模式 (Pooled)
-- **适用等级**: Basic、Standard、Premium
-- **特点**: 多个租户共享相同的基础设施
-- **隔离方式**: 通过应用层逻辑实现数据隔离
-- **优势**: 成本效益高，适合小型租户
-- **用户池**: 共享Cognito用户池
+### Pooled Model
+- **Applicable tiers**: Basic, Standard, Premium
+- **Characteristics**: Multiple tenants share the same infrastructure
+- **Isolation method**: Data isolation achieved through application-layer logic
+- **Advantages**: Cost-effective, suitable for small tenants
+- **User pool**: Shared Cognito user pool
 
-### 专用模式 (Silo)
-- **适用等级**: Platinum
-- **特点**: 每个租户拥有独立的基础设施
-- **隔离方式**: 物理级别的数据隔离
-- **优势**: 更高的安全性，适合大型企业租户
-- **用户池**: 独立Cognito用户池
-- **基础设施**: 通过CodePipeline自动部署专用CloudFormation栈
+### Silo Model
+- **Applicable tier**: Platinum
+- **Characteristics**: Each tenant has independent infrastructure
+- **Isolation method**: Physical-level data isolation
+- **Advantages**: Higher security, suitable for large enterprise tenants
+- **User pool**: Independent Cognito user pool
+- **Infrastructure**: A dedicated CloudFormation stack deployed automatically via CodePipeline
 
-## 服务等级
+## Service Tiers
 
-| 等级 | 隔离模式 | API限制 | 用户池 | 基础设施 | 适用场景 |
+| Tier | Isolation Model | API Limit | User Pool | Infrastructure | Use Case |
 |------|----------|---------|--------|----------|----------|
-| Basic | 池化 | 低 | 共享 | 共享 | 小型企业 |
-| Standard | 池化 | 中等 | 共享 | 共享 | 中型企业 |
-| Premium | 池化 | 高 | 共享 | 共享 | 大型企业 |
-| Platinum | 专用 | 最高 | 独立 | 专用 | 企业级客户 |
+| Basic | Pooled | Low | Shared | Shared | Small businesses |
+| Standard | Pooled | Medium | Shared | Shared | Medium businesses |
+| Premium | Pooled | High | Shared | Shared | Large businesses |
+| Platinum | Silo | Highest | Independent | Dedicated | Enterprise customers |
 
-## 监控和运维
+## Monitoring and Operations
 
-### 日志记录
-- 所有Lambda函数集成结构化日志
-- 租户上下文信息自动记录
-- CloudWatch日志集中管理
+### Logging
+- All Lambda functions integrate structured logging
+- Tenant context information is recorded automatically
+- Centralized management via CloudWatch Logs
 
-### 性能监控
-- X-Ray分布式追踪
-- CloudWatch指标监控
-- API Gateway访问日志
+### Performance Monitoring
+- X-Ray distributed tracing
+- CloudWatch metric monitoring
+- API Gateway access logs
 
-### 告警配置
-- API限流告警
-- 错误率监控
-- 性能阈值告警
+### Alarm Configuration
+- API throttling alarms
+- Error rate monitoring
+- Performance threshold alarms
 
-### API限流和使用计划管理
+### API Throttling and Usage Plan Management
 
-#### UpdateUsagePlanFunction 功能分析
+#### UpdateUsagePlanFunction Analysis
 
-**主要作用**: `UpdateUsagePlanFunction` 是一个自定义资源Lambda函数，用于**将租户的API Gateway与相应的使用计划(Usage Plan)关联**，实现基于租户等级的API限流和配额控制。
+**Primary purpose**: `UpdateUsagePlanFunction` is a custom-resource Lambda function used to **associate a tenant's API Gateway with the corresponding Usage Plan**, implementing tier-based API throttling and quota control.
 
-#### 🔄 核心功能
+#### 🔄 Core Functionality
 
-**动态关联使用计划**:
+**Dynamically associating usage plans**:
 ```python
 def do_action(event, _):
     """ Usage plans are created as part of bootstrap template.
@@ -1120,12 +1123,12 @@ def do_action(event, _):
     usage_plan_id_platinum = event['ResourceProperties']['UsagePlanPlatinumTier']
 ```
 
-**基于部署模式的关联策略**:
+**Association strategy based on deployment model**:
 
-**池化部署 (Pooled Deploy)**:
+**Pooled Deploy**:
 ```python
 if(is_pooled_deploy == "true"):
-    # 池化租户共享所有等级的使用计划
+    # Pooled tenants share usage plans of all tiers
     response_apigateway = apigateway.update_usage_plan(
         usagePlanId=usage_plan_id_basic,
         patchOperations=[
@@ -1136,13 +1139,13 @@ if(is_pooled_deploy == "true"):
             }
         ]
     )
-    # 同样关联Standard、Premium等级
+    # Likewise associate the Standard and Premium tiers
 ```
 
-**专用部署 (Silo Deploy)**:
+**Silo Deploy**:
 ```python
 else:
-    # 专用租户只关联Platinum等级使用计划
+    # Dedicated tenants associate only with the Platinum-tier usage plan
     response_apigateway = apigateway.update_usage_plan(
         usagePlanId=usage_plan_id_platinum,
         patchOperations=[
@@ -1155,59 +1158,59 @@ else:
     )
 ```
 
-#### 🎯 使用计划等级配置
+#### 🎯 Usage Plan Tier Configuration
 
-**Basic Tier (基础等级)**:
+**Basic Tier**:
 ```yaml
 UsagePlanBasicTier:
   Properties:
     Quota:
-      Limit: 500        # 每日500次请求
+      Limit: 500        # 500 requests per day
       Period: DAY
     Throttle:
-      BurstLimit: 50    # 突发限制50次
-      RateLimit: 50     # 每秒50次
+      BurstLimit: 50    # Burst limit of 50
+      RateLimit: 50     # 50 per second
 ```
 
-**Standard Tier (标准等级)**:
+**Standard Tier**:
 ```yaml
 UsagePlanStandardTier:
   Properties:
     Quota:
-      Limit: 3000       # 每日3000次请求
+      Limit: 3000       # 3000 requests per day
       Period: DAY
     Throttle:
-      BurstLimit: 100   # 突发限制100次
-      RateLimit: 75     # 每秒75次
+      BurstLimit: 100   # Burst limit of 100
+      RateLimit: 75     # 75 per second
 ```
 
-**Premium Tier (高级等级)**:
+**Premium Tier**:
 ```yaml
 UsagePlanPremiumTier:
   Properties:
     Quota:
-      Limit: 5000       # 每日5000次请求
+      Limit: 5000       # 5000 requests per day
       Period: DAY
     Throttle:
-      BurstLimit: 200   # 突发限制200次
-      RateLimit: 100    # 每秒100次
+      BurstLimit: 200   # Burst limit of 200
+      RateLimit: 100    # 100 per second
 ```
 
-**Platinum Tier (白金等级)**:
+**Platinum Tier**:
 ```yaml
 UsagePlanPlatinumTier:
   Properties:
     Quota:
-      Limit: 10000      # 每日10000次请求
+      Limit: 10000      # 10000 requests per day
       Period: DAY
     Throttle:
-      BurstLimit: 300   # 突发限制300次
-      RateLimit: 300    # 每秒300次
+      BurstLimit: 300   # Burst limit of 300
+      RateLimit: 300    # 300 per second
 ```
 
-#### 🔄 执行流程
+#### 🔄 Execution Flow
 
-**CloudFormation自定义资源**:
+**CloudFormation custom resource**:
 ```yaml
 AssociateUsagePlanWithTenantAPI:
   Type: Custom::AssociateUsagePlanWithTenantAPI
@@ -1223,12 +1226,12 @@ AssociateUsagePlanWithTenantAPI:
     UsagePlanPlatinumTier: !ImportValue Serverless-SaaS-UsagePlanPlatinumTier
 ```
 
-**Lambda函数执行**:
-- **创建时**: 执行 `do_action` 函数，关联使用计划
-- **更新时**: 执行 `do_nothing` 函数，不做任何操作
-- **删除时**: 执行 `do_nothing` 函数，不做任何操作
+**Lambda function execution**:
+- **On create**: Executes the `do_action` function to associate usage plans
+- **On update**: Executes the `do_nothing` function, taking no action
+- **On delete**: Executes the `do_nothing` function, taking no action
 
-#### 🛡️ 权限配置
+#### 🛡️ Permission Configuration
 
 ```yaml
 UpdateUsagePlanLambdaExecutionRole:
@@ -1246,24 +1249,24 @@ UpdateUsagePlanLambdaExecutionRole:
             Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/ServerlessSaaS-Settings
 ```
 
-#### 🎯 业务价值
+#### 🎯 Business Value
 
-**多租户API限流**:
-- **池化租户**: 共享基础设施，通过使用计划控制API访问频率
-- **专用租户**: 独立基础设施，享受最高等级的使用计划
+**Multi-tenant API throttling**:
+- **Pooled tenants**: Share infrastructure and control API access frequency through usage plans
+- **Dedicated tenants**: Have independent infrastructure and enjoy the highest-tier usage plan
 
-**服务等级差异化**:
-- **Basic**: 适合小型企业，限制较严格
-- **Standard**: 适合中型企业，平衡性能和成本
-- **Premium**: 适合大型企业，较高性能
-- **Platinum**: 适合企业级客户，最高性能
+**Service tier differentiation**:
+- **Basic**: Suitable for small businesses, with stricter limits
+- **Standard**: Suitable for medium businesses, balancing performance and cost
+- **Premium**: Suitable for large businesses, with higher performance
+- **Platinum**: Suitable for enterprise customers, with the highest performance
 
-**成本控制**:
-- 通过API限流防止资源滥用
-- 基于使用量进行计费
-- 支持突发流量处理
+**Cost control**:
+- Prevents resource abuse through API throttling
+- Bills based on usage
+- Supports burst-traffic handling
 
-**监控和告警**:
+**Monitoring and alarms**:
 ```yaml
 ThrottlingLimitExceeded:
   Type: AWS::CloudWatch::Alarm
@@ -1273,37 +1276,37 @@ ThrottlingLimitExceeded:
     Namespace: "Serverless-SaaS-Reference-Architecture"
 ```
 
-#### 🔗 与其他组件的关联
+#### 🔗 Associations with Other Components
 
-| 组件 | 关联方式 | 作用 |
+| Component | Association Method | Purpose |
 |------|----------|------|
-| **API Gateway** | 通过API ID关联 | 为租户API应用限流策略 |
-| **使用计划** | 通过Usage Plan ID关联 | 定义限流和配额规则 |
-| **CloudWatch** | 监控告警 | 监控限流事件 |
-| **DynamoDB** | 配置存储 | 存储租户配置信息 |
+| **API Gateway** | Associated via API ID | Applies throttling policies to the tenant API |
+| **Usage Plan** | Associated via Usage Plan ID | Defines throttling and quota rules |
+| **CloudWatch** | Monitoring alarms | Monitors throttling events |
+| **DynamoDB** | Configuration storage | Stores tenant configuration information |
 
-#### 📈 总结
+#### 📈 Summary
 
-`UpdateUsagePlanFunction` 是多租户SaaS架构中的关键组件，它实现了：
+`UpdateUsagePlanFunction` is a key component in the multi-tenant SaaS architecture. It implements:
 
-1. **动态限流**: 根据租户等级自动应用不同的API限流策略
-2. **服务差异化**: 通过使用计划实现服务等级的差异化
-3. **资源保护**: 防止API滥用，保护系统资源
-4. **成本优化**: 基于使用量进行精确的成本控制
-5. **监控告警**: 提供完整的限流监控和告警机制
+1. **Dynamic throttling**: Automatically applies different API throttling policies based on tenant tier
+2. **Service differentiation**: Achieves service-tier differentiation through usage plans
+3. **Resource protection**: Prevents API abuse and protects system resources
+4. **Cost optimization**: Provides precise, usage-based cost control
+5. **Monitoring and alarms**: Provides a complete throttling monitoring and alarm mechanism
 
-这种设计确保了多租户SaaS平台能够为不同等级的客户提供差异化的服务体验，同时保护系统资源不被滥用。
+This design ensures that the multi-tenant SaaS platform can provide a differentiated service experience for customers of different tiers while protecting system resources from abuse.
 
-## API限流监控机制
+## API Throttling Monitoring Mechanism
 
-### 🎯 ThrottlingLimitExceeded Metric 定义
+### 🎯 ThrottlingLimitExceeded Metric Definition
 
-#### 📍 定义位置
+#### 📍 Definition Location
 
-**文件**: `server/tenant-template.yaml`  
-**行号**: 375-384
+**File**: `server/tenant-template.yaml`  
+**Lines**: 375-384
 
-#### 🔧 Metric Filter 配置
+#### 🔧 Metric Filter Configuration
 
 ```yaml
 ThrottlingLimitMetricFilter:
@@ -1319,60 +1322,60 @@ ThrottlingLimitMetricFilter:
         MetricName: !Join ['-', ["ThrottlingLimitExceeded", !Ref TenantIdParameter]]
 ```
 
-### 🔄 工作原理
+### 🔄 How It Works
 
-#### 1. **数据源**
+#### 1. **Data Source**
 ```yaml
 LogGroupName: 
   Ref: "ApiGatewayAccessLogs"
 ```
-- **来源**: API Gateway访问日志
-- **日志组**: `/aws/api-gateway/access-logs-serverless-saas-tenant-api-{tenantId}`
+- **Source**: API Gateway access logs
+- **Log group**: `/aws/api-gateway/access-logs-serverless-saas-tenant-api-{tenantId}`
 
-#### 2. **过滤模式**
+#### 2. **Filter Pattern**
 ```yaml
 FilterPattern: '{$.status = "429"}'
 ```
-- **作用**: 过滤HTTP状态码为429的日志条目
-- **含义**: 429 = "Too Many Requests" (限流响应)
+- **Purpose**: Filters log entries with HTTP status code 429
+- **Meaning**: 429 = "Too Many Requests" (throttling response)
 
-#### 3. **指标转换**
+#### 3. **Metric Transformation**
 ```yaml
 MetricTransformations:
   - 
-    MetricValue: "1"                                    # 每次限流事件计为1
-    MetricNamespace: "Serverless-SaaS-Reference-Architecture"  # 指标命名空间
-    MetricName: !Join ['-', ["ThrottlingLimitExceeded", !Ref TenantIdParameter]]  # 指标名称
+    MetricValue: "1"                                    # Each throttling event counts as 1
+    MetricNamespace: "Serverless-SaaS-Reference-Architecture"  # Metric namespace
+    MetricName: !Join ['-', ["ThrottlingLimitExceeded", !Ref TenantIdParameter]]  # Metric name
 ```
 
-### 🔄 完整流程
+### 🔄 Complete Flow
 
-#### 1. **API Gateway访问日志**
+#### 1. **API Gateway Access Log**
 ```json
 {
   "requestId": "abc123",
   "ip": "192.168.1.1",
-  "status": "429",  // 限流响应
+  "status": "429",  // Throttling response
   "httpMethod": "GET",
   "resourcePath": "/orders",
   "responseLength": "0"
 }
 ```
 
-#### 2. **Metric Filter处理**
+#### 2. **Metric Filter Processing**
 ```
-日志条目 → FilterPattern匹配 → 生成指标
-{$.status = "429"} → 匹配成功 → ThrottlingLimitExceeded-{tenantId} = 1
-```
-
-#### 3. **CloudWatch指标**
-```
-指标名称: ThrottlingLimitExceeded-{tenantId}
-命名空间: Serverless-SaaS-Reference-Architecture
-值: 1 (每次限流事件)
+Log entry → FilterPattern match → Generate metric
+{$.status = "429"} → Match succeeds → ThrottlingLimitExceeded-{tenantId} = 1
 ```
 
-#### 4. **告警触发**
+#### 3. **CloudWatch Metric**
+```
+Metric name: ThrottlingLimitExceeded-{tenantId}
+Namespace: Serverless-SaaS-Reference-Architecture
+Value: 1 (per throttling event)
+```
+
+#### 4. **Alarm Trigger**
 ```yaml
 ThrottlingLimitExceeded:
   Type: AWS::CloudWatch::Alarm
@@ -1380,12 +1383,12 @@ ThrottlingLimitExceeded:
     MetricName: !Join ['-', ["ThrottlingLimitExceeded", !Ref TenantIdParameter]]
     Namespace: "Serverless-SaaS-Reference-Architecture"
     Threshold: 0
-    Statistic: SampleCount  # 统计60秒内的事件次数
+    Statistic: SampleCount  # Counts the number of events within 60 seconds
 ```
 
-### 🔧 关键组件关联
+### 🔧 Key Component Associations
 
-#### 1. **API Gateway配置**
+#### 1. **API Gateway Configuration**
 ```yaml
 ApiGatewayTenantApi:
   Properties:
@@ -1394,7 +1397,7 @@ ApiGatewayTenantApi:
       Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "caller":"$context.identity.caller", "user":"$context.identity.user","requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength" }'
 ```
 
-#### 2. **日志组**
+#### 2. **Log Group**
 ```yaml
 ApiGatewayAccessLogs:
   Type: AWS::Logs::LogGroup
@@ -1416,205 +1419,207 @@ ThrottlingLimitMetricFilter:
         MetricName: !Join ['-', ["ThrottlingLimitExceeded", !Ref TenantIdParameter]]
 ```
 
-### 🎯 设计优势
+### 🎯 Design Advantages
 
-#### 1. **自动化监控**
-- 无需手动编写代码
-- 基于日志自动生成指标
-- 实时监控限流事件
+#### 1. **Automated Monitoring**
+- No need to write code manually
+- Metrics are generated automatically from logs
+- Real-time monitoring of throttling events
 
-#### 2. **租户隔离**
-- 每个租户有独立的指标名称
-- 便于隔离监控和告警
-- 支持租户级别的分析
+#### 2. **Tenant Isolation**
+- Each tenant has an independent metric name
+- Facilitates isolated monitoring and alarming
+- Supports tenant-level analysis
 
-#### 3. **成本效益**
-- 利用现有的访问日志
-- 无需额外的监控代码
-- 高效的日志过滤机制
+#### 3. **Cost-effectiveness**
+- Leverages existing access logs
+- No additional monitoring code required
+- Efficient log filtering mechanism
 
-#### 4. **可扩展性**
-- 易于添加新的过滤条件
-- 支持复杂的日志模式匹配
-- 可扩展到其他类型的监控
+#### 4. **Scalability**
+- Easy to add new filter conditions
+- Supports complex log pattern matching
+- Extensible to other types of monitoring
 
-### 📊 监控效果
+### 📊 Monitoring Results
 
-#### 1. **实时性**
-- 日志产生后立即处理
-- 指标实时更新
-- 告警快速触发
+#### 1. **Real-time**
+- Processed immediately after logs are produced
+- Metrics updated in real time
+- Alarms triggered quickly
 
-#### 2. **准确性**
-- 基于实际的HTTP响应状态
-- 过滤条件精确匹配
-- 避免误报和漏报
+#### 2. **Accuracy**
+- Based on actual HTTP response status
+- Filter conditions match precisely
+- Avoids false positives and false negatives
 
-#### 3. **可追溯性**
-- 保留完整的访问日志
-- 支持历史数据分析
-- 便于问题诊断
+#### 3. **Traceability**
+- Retains complete access logs
+- Supports historical data analysis
+- Facilitates problem diagnosis
 
-### 🔍 验证方法
+### 🔍 Verification Methods
 
-#### 1. **查看日志组**
+#### 1. **View Log Groups**
 ```bash
 aws logs describe-log-groups --log-group-name-prefix "/aws/api-gateway/access-logs-serverless-saas-tenant-api-"
 ```
 
-#### 2. **查看指标**
+#### 2. **View Metrics**
 ```bash
 aws cloudwatch list-metrics --namespace "Serverless-SaaS-Reference-Architecture" --metric-name "ThrottlingLimitExceeded-*"
 ```
 
-#### 3. **查看告警**
+#### 3. **View Alarms**
 ```bash
 aws cloudwatch describe-alarms --alarm-names "ThrottlingLimitExceeded-*"
 ```
 
-### 🚨 告警配置详解
+### 🚨 Detailed Alarm Configuration
 
-#### Threshold: 0 的含义
+#### Meaning of Threshold: 0
 ```yaml
 Threshold: 0
 Statistic: SampleCount
 ```
-- **含义**: 当60秒内发生任何限流事件时触发告警
-- **逻辑**: 任何非零的限流事件都表示API限流被触发
-- **适用性**: 适用于所有Tier等级，因为任何限流都值得关注
+- **Meaning**: Triggers an alarm when any throttling event occurs within 60 seconds
+- **Logic**: Any non-zero throttling event indicates that API throttling has been triggered
+- **Applicability**: Applies to all tiers, because any throttling is worth attention
 
-#### 分层预警策略
+#### Tiered Alerting Strategy
 ```yaml
-# Basic Tier - 严格监控
+# Basic Tier - Strict monitoring
 BasicTierThrottlingAlarm:
   Threshold: 0
   EvaluationPeriods: 1
 
-# Standard Tier - 中等监控  
+# Standard Tier - Moderate monitoring  
 StandardTierThrottlingAlarm:
   Threshold: 5
   EvaluationPeriods: 2
 
-# Premium Tier - 宽松监控
+# Premium Tier - Relaxed monitoring
 PremiumTierThrottlingAlarm:
   Threshold: 10
   EvaluationPeriods: 3
 
-# Platinum Tier - 最小监控
+# Platinum Tier - Minimal monitoring
 PlatinumTierThrottlingAlarm:
   Threshold: 20
   EvaluationPeriods: 5
 ```
 
-#### Statistic: SampleCount 含义
-- **定义**: 统计指定时间段内事件的发生次数
-- **Period: 60**: 60秒为一个统计周期
-- **实际含义**: 统计60秒内限流事件的发生次数
-- **告警触发**: 当60秒内限流事件次数 > Threshold 时触发
+#### Meaning of Statistic: SampleCount
+- **Definition**: Counts the number of events within a specified time period
+- **Period: 60**: 60 seconds is one statistical period
+- **Actual meaning**: Counts the number of throttling events within 60 seconds
+- **Alarm trigger**: Triggers when the number of throttling events within 60 seconds > Threshold
 
-### 🔗 与其他监控组件的关联
+### 🔗 Associations with Other Monitoring Components
 
-| 组件 | 关联方式 | 作用 |
+| Component | Association Method | Purpose |
 |------|----------|------|
-| **API Gateway** | 访问日志 | 提供限流事件数据源 |
-| **CloudWatch Logs** | Metric Filter | 将日志转换为指标 |
-| **CloudWatch Metrics** | 指标存储 | 存储限流统计数据 |
-| **CloudWatch Alarms** | 告警触发 | 基于指标触发告警 |
-| **SNS Topics** | 通知分发 | 发送告警通知 |
+| **API Gateway** | Access logs | Provides the throttling event data source |
+| **CloudWatch Logs** | Metric Filter | Converts logs into metrics |
+| **CloudWatch Metrics** | Metric storage | Stores throttling statistics |
+| **CloudWatch Alarms** | Alarm trigger | Triggers alarms based on metrics |
+| **SNS Topics** | Notification distribution | Sends alarm notifications |
 
-### 📈 监控价值
+### 📈 Monitoring Value
 
-#### 1. **业务洞察**
-- 识别API使用模式
-- 发现性能瓶颈
-- 优化资源分配
+#### 1. **Business Insights**
+- Identify API usage patterns
+- Discover performance bottlenecks
+- Optimize resource allocation
 
-#### 2. **运维保障**
-- 及时发现限流问题
-- 快速响应异常情况
-- 保障服务质量
+#### 2. **Operational Assurance**
+- Detect throttling issues promptly
+- Respond quickly to anomalies
+- Ensure service quality
 
-#### 3. **成本控制**
-- 监控API使用量
-- 优化限流策略
-- 控制运营成本
+#### 3. **Cost Control**
+- Monitor API usage
+- Optimize throttling policies
+- Control operational costs
 
-#### 4. **用户体验**
-- 减少服务中断
-- 提高响应速度
-- 保障服务可用性
+#### 4. **User Experience**
+- Reduce service disruptions
+- Improve response speed
+- Ensure service availability
 
-这种基于CloudWatch Logs Metric Filter的限流监控机制确保了多租户SaaS平台的稳定性和可靠性，为不同等级的客户提供差异化的服务质量保障。
+This CloudWatch Logs Metric Filter-based throttling monitoring mechanism ensures the stability and reliability of the multi-tenant SaaS platform, providing differentiated service-quality guarantees for customers of different tiers.
 
-## 安全特性
+## Security Features
 
-- **身份认证**: AWS Cognito用户池
-- **API授权**: Lambda授权器
-- **数据加密**: 传输和存储加密
-- **网络安全**: VPC和安全组配置
-- **访问控制**: IAM角色和策略
+- **Identity authentication**: AWS Cognito user pools
+- **API authorization**: Lambda authorizer
+- **Data encryption**: Encryption in transit and at rest
+- **Network security**: VPC and security group configuration
+- **Access control**: IAM roles and policies
 
-## 开发指南
+## Development Guide
 
-### 本地开发
+### Local Development
 ```bash
-# 启动本地API
+# Start the local API
 sam local start-api
 
-# 启动前端开发服务器
+# Start the frontend development server
 cd client/Application
 ng serve
 ```
 
-### 测试
+### Testing
+
+Cross-platform test suite (Windows / macOS / Linux); see [`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md) for details:
+
 ```bash
-# 运行单元测试
-npm test
+# Backend: pytest + moto (in-memory mock DynamoDB, no Docker / AWS required)
+pip install -r requirements-test.txt
+pytest
 
-# 运行端到端测试
-npm run e2e
-
-# API限流测试
-./scripts/test-basic-tier-throttling.sh
+# Frontend: Playwright runtime smoke test (first run ng build for each, then)
+cd e2e && npm install && npx playwright install chromium && npx playwright test
 ```
 
-## 扩展和定制
+See CI under `.github/workflows/`: `backend-tests.yml` (pytest on three platforms) and `frontend-e2e.yml` (builds the three apps + Playwright).
 
-### 添加新服务
-1. 在`server/`目录下创建新的服务目录
-2. 实现Lambda函数和数据访问层
-3. 更新CloudFormation模板
-4. 配置API Gateway路由
+## Extension and Customization
 
-### 自定义租户配置
-1. 修改租户表结构
-2. 更新租户管理服务
-3. 调整前端管理界面
+### Adding a New Service
+1. Create a new service directory under `server/`
+2. Implement the Lambda functions and the data access layer
+3. Update the CloudFormation templates
+4. Configure the API Gateway routes
 
-## 故障排除
+### Customizing Tenant Configuration
+1. Modify the tenant table structure
+2. Update the tenant management service
+3. Adjust the frontend management interface
 
-### 常见问题
-1. **部署失败**: 检查AWS权限和配额
-2. **API调用失败**: 验证API密钥和授权配置
-3. **前端无法访问**: 检查CORS配置和CloudFront分发
+## Troubleshooting
 
-### 调试工具
-- CloudWatch日志
-- X-Ray追踪
-- API Gateway测试控制台
+### Common Issues
+1. **Deployment failure**: Check AWS permissions and quotas
+2. **API call failure**: Verify the API key and authorization configuration
+3. **Frontend inaccessible**: Check the CORS configuration and CloudFront distribution
 
-## 贡献指南
+### Debugging Tools
+- CloudWatch Logs
+- X-Ray tracing
+- API Gateway test console
 
-1. Fork项目仓库
-2. 创建功能分支
-3. 提交代码变更
-4. 创建Pull Request
+## Contributing
 
-## 许可证
+Contributions are welcome! Please first read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+Please report security issues privately following [`SECURITY.md`](SECURITY.md). See [`CHANGELOG.md`](CHANGELOG.md) for version changes.
 
-本项目基于MIT-0许可证开源。
+## License
 
-## 相关资源
+This project is open-sourced under the [MIT-0](LICENSE) license. For upstream provenance and attribution, see [`NOTICE`](NOTICE);
+for differences from the upstream Workshop, see [`docs/CHANGES_FROM_WORKSHOP.md`](docs/CHANGES_FROM_WORKSHOP.md).
+
+## Related Resources
 
 - [AWS Serverless Application Model (SAM)](https://aws.amazon.com/serverless/sam/)
 - [AWS Lambda](https://aws.amazon.com/lambda/)
@@ -1623,6 +1628,6 @@ npm run e2e
 - [AWS Cognito](https://aws.amazon.com/cognito/)
 - [Angular Framework](https://angular.io/)
 
-## 支持
+## Support
 
-如有问题或建议，请通过GitHub Issues提交反馈。
+If you have questions or suggestions, please submit feedback via GitHub Issues.

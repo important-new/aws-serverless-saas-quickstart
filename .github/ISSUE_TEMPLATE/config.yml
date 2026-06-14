@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/important-new/aws-serverless-saas-quickstart/security/policy
+    about: Please report security vulnerabilities privately using GitHub private vulnerability reporting. Do not open a public issue.
+  - name: Questions and general discussion
+    url: https://github.com/important-new/aws-serverless-saas-quickstart/discussions
+    about: Have a question or want to discuss an idea? Please use GitHub Discussions.
