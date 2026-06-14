@@ -1,13 +1,34 @@
 # 免费本地后端测试（无需 AWS 账号）
 
-用 **DynamoDB Local（Docker）+ `sam local invoke`** 在本地真实跑后端服务，
-验证 Lambda handler + DAL + DynamoDB 读写——零成本、不碰真实 AWS。
+在本地真实跑后端服务，验证 Lambda handler + DAL + DynamoDB 读写——零成本、
+不碰真实 AWS。提供两种方式。
 
-> 注意：这套**不含 Cognito**。真实登录依赖 Cognito（无免费本地方案，见
-> `docs/MIGRATION_VERIFICATION.md`）。本地测试通过 `requestContext.authorizer`
+> 注意：两种方式都**不含 Cognito**。真实登录依赖 Cognito（无免费本地方案，见
+> `docs/MIGRATION_VERIFICATION.md`）。均通过 `requestContext.authorizer`
 > 注入假的鉴权上下文（`tenantId`/`userRole`）来绕过 authorizer。
 
-## 前置
+## 方式一（推荐，跨平台）：pytest + moto
+
+纯 Python，**Windows/macOS/Linux 通用，无需 Docker、无需 AWS**。`moto` 在内存里
+模拟 DynamoDB。两条命令：
+
+```bash
+pip install -r requirements-test.txt
+pytest
+```
+
+- 测试位于 `server/services/*/tests/test_*.py`：直接 import handler、用 moto mock
+  DynamoDB、断言 CRUD（含 update 回归测试，锁住已修复的 3 个 bug）。
+- 共享设置见 `server/conftest.py`（把共享层与各服务 `src/` 加进 `sys.path`，并在
+  import 前设好环境变量）。
+- CI：`.github/workflows/backend-tests.yml` 在 ubuntu/windows/macOS 三平台跑 `pytest`。
+
+写测试套件、跑 CI 首选此方式。下面的 DynamoDB Local 更保真但更重、依赖 Docker 与
+Git Bash（非跨平台），适合偶尔高保真验证。
+
+## 方式二（高保真）：DynamoDB Local + sam local invoke
+
+### 前置
 - Docker 运行中
 - SAM CLI（`pip install aws-sam-cli`）
 - 本地 Python + boto3（`pip install boto3`）

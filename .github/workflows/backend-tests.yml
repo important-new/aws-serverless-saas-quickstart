@@ -1,0 +1,32 @@
+name: backend-tests
+
+on:
+  push:
+    paths:
+      - "server/**"
+      - "requirements-test.txt"
+      - "pytest.ini"
+      - ".github/workflows/backend-tests.yml"
+  pull_request:
+    paths:
+      - "server/**"
+      - "requirements-test.txt"
+      - "pytest.ini"
+
+jobs:
+  pytest:
+    name: pytest (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install test dependencies
+        run: pip install -r requirements-test.txt
+      - name: Run tests
+        run: pytest
