@@ -5,7 +5,7 @@ const fs = require('fs');
 // 登录凭据配置
 const LOGIN_CONFIG = {
   username: 'admin',
-  password: 'CHANGE_ME'
+  password: process.env.ADMIN_PASSWORD || 'CHANGE_ME'
 };
 
 // 检查应用是否运行
