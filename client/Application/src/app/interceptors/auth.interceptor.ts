@@ -10,7 +10,7 @@ import {
   HttpInterceptor,
 } from '@angular/common/http';
 import { from, Observable } from 'rxjs';
-import { Auth } from 'aws-amplify';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { filter, map, switchMap } from 'rxjs/operators';
 
 @Injectable()
@@ -26,12 +26,15 @@ export class AuthInterceptor implements HttpInterceptor {
       return next.handle(req);
     }
 
-    const s = Auth.currentSession().catch((err) => console.log(err));
+    const s = fetchAuthSession().catch((err) => {
+      console.log(err);
+      return null;
+    });
     const session$ = from(s);
 
     return session$.pipe(
-      filter((sesh) => !!sesh),
-      map((sesh) => (!!sesh ? sesh.getIdToken().getJwtToken() : '')),
+      filter((sesh) => !!sesh?.tokens?.idToken),
+      map((sesh) => sesh?.tokens?.idToken?.toString() ?? ''),
       switchMap((tok) => {
         req = req.clone({
           headers: req.headers.set('Authorization', 'Bearer ' + tok),

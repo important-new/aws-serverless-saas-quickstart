@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { ProductService } from '../product.service';
 
 @Component({
+  standalone: false,
   selector: 'app-create',
   templateUrl: './create.component.html',
   styleUrls: ['./create.component.scss'],

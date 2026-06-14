@@ -9,7 +9,7 @@ import {
   Router,
   RouterStateSnapshot,
 } from '@angular/router';
-import { Auth } from 'aws-amplify';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { AuthConfigurationService } from './views/auth/auth-configuration.service';
 
 @Injectable({ providedIn: 'root' })
@@ -31,9 +31,9 @@ export class CognitoGuard implements CanActivate {
       });
     }
 
-    return Auth.currentSession()
+    return fetchAuthSession()
       .then((u) => {
-        if (u.isValid()) {
+        if (u.tokens?.idToken) {
           return true;
         } else {
           this.authConfigService.cleanLocalStorage();

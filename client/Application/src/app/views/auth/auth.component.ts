@@ -1,15 +1,16 @@
 import { Component, OnInit } from '@angular/core';
-import { from, Observable, pipe } from 'rxjs';
-import { Auth } from 'aws-amplify';
-import { CognitoUserSession } from 'amazon-cognito-identity-js';
+import { from, Observable } from 'rxjs';
+import { fetchAuthSession, signOut } from 'aws-amplify/auth';
+import type { AuthSession } from 'aws-amplify/auth';
 import { map } from 'rxjs/operators';
 
 @Component({
+  standalone: false,
   templateUrl: './auth.component.html',
   styleUrls: ['./auth.component.scss'],
 })
 export class AuthComponent implements OnInit {
-  session$: Observable<CognitoUserSession> | undefined;
+  session$: Observable<AuthSession> | undefined;
   userData$: Observable<any> | undefined;
   isAuthenticated$: Observable<boolean> | undefined;
   checkSessionChanged$: Observable<boolean> | undefined;
@@ -20,17 +21,19 @@ export class AuthComponent implements OnInit {
   constructor() {}
 
   ngOnInit(): void {
-    this.session$ = from(Auth.currentSession());
+    this.session$ = from(fetchAuthSession());
     this.accessToken$ = this.session$.pipe(
-      map((sesh) => sesh.getAccessToken().getJwtToken())
+      map((sesh) => sesh.tokens?.accessToken?.toString() ?? '')
     );
     this.idToken$ = this.session$.pipe(
-      map((sesh) => sesh.getIdToken().getJwtToken())
+      map((sesh) => sesh.tokens?.idToken?.toString() ?? '')
     );
-    this.isAuthenticated$ = this.session$.pipe(map((sesh) => sesh.isValid()));
+    this.isAuthenticated$ = this.session$.pipe(
+      map((sesh) => !!sesh.tokens?.idToken)
+    );
   }
 
   async logout() {
-    await Auth.signOut({ global: true });
+    await signOut({ global: true });
   }
 }

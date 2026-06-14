@@ -11,11 +11,12 @@ import {
 } from '@angular/router';
 
 import { AuthenticatorService } from '@aws-amplify/ui-angular';
-import { Auth } from 'aws-amplify';
+import { fetchAuthSession, signOut } from 'aws-amplify/auth';
 import { navItems } from '../_nav';
 import { AuthConfigurationService } from './../views/auth/auth-configuration.service';
 
 @Component({
+  standalone: false,
   selector: 'app-nav',
   templateUrl: './nav.component.html',
   styleUrls: ['./nav.component.scss'],
@@ -53,29 +54,22 @@ export class NavComponent implements OnInit {
 
   ngOnInit(): void {
     try {
-      const s = Auth.currentSession().catch((err) => {
+      const s = fetchAuthSession().catch((err) => {
         console.log('Failed to get current session. Err: ', err);
-        return err;
+        return null;
       });
       const session$ = from(s);
       this.isAuthenticated$ = session$.pipe(
         filter((sesh) => !!sesh),
-        map(
-          (sesh) => sesh && typeof sesh.isValid === 'function' && sesh.isValid()
-        )
+        map((sesh) => !!sesh?.tokens?.idToken)
       );
 
-      const token$ = session$.pipe(
-        map(
-          (sesh) =>
-            sesh && typeof sesh.getIdToken === 'function' && sesh.getIdToken()
-        )
-      );
+      const token$ = session$.pipe(map((sesh) => sesh?.tokens?.idToken));
       this.username$ = token$.pipe(
-        map((t) => t && t.payload && t.payload['cognito:username'])
+        map((t) => (t && t.payload && (t.payload['cognito:username'] as string)) || '')
       );
       this.companyName$ = token$.pipe(
-        map((t) => t.payload && t.payload['custom:company-name'])
+        map((t) => (t && t.payload && (t.payload['custom:company-name'] as string)) || '')
       );
     } catch (err) {
       console.error('Unable to get current session.');
@@ -83,7 +77,7 @@ export class NavComponent implements OnInit {
   }
 
   async logout() {
-    await Auth.signOut({ global: true })
+    await signOut({ global: true })
       .then((e) => {
         this.authConfigService.cleanLocalStorage();
         this.router.navigate(['/unauthorized']);

@@ -4,6 +4,7 @@ import { Order } from '../models/order.interface';
 import { OrdersService } from '../orders.service';
 
 @Component({
+  standalone: false,
   selector: 'app-list',
   templateUrl: './list.component.html',
   styleUrls: ['./list.component.scss'],

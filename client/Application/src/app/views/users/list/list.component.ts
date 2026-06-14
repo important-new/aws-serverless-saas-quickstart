@@ -7,6 +7,7 @@ import { User } from '../models/user';
 import { UsersService } from '../users.service';
 
 @Component({
+  standalone: false,
   selector: 'app-user',
   templateUrl: './list.component.html',
   styleUrls: ['./list.component.scss'],

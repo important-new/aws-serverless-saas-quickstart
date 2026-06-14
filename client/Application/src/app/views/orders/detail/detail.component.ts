@@ -10,6 +10,7 @@ import { Order } from '../models/order.interface';
 import { OrderProduct } from '../models/orderproduct.interface';
 import { OrdersService } from '../orders.service';
 @Component({
+  standalone: false,
   selector: 'app-detail',
   templateUrl: './detail.component.html',
   styleUrls: ['./detail.component.scss'],

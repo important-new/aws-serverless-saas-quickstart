@@ -10,6 +10,7 @@ import { map, switchMap } from 'rxjs/operators';
 import { Product } from '../models/product.interface';
 import { ProductService } from '../product.service';
 @Component({
+  standalone: false,
   selector: 'app-edit',
   templateUrl: './edit.component.html',
   styleUrls: ['./edit.component.scss'],

@@ -11,6 +11,7 @@ interface LineItem {
   quantity?: number;
 }
 @Component({
+  standalone: false,
   selector: 'app-create',
   templateUrl: './create.component.html',
   styleUrls: ['./create.component.scss'],
