@@ -1,1 +1,18 @@
-server/TenantManagementService/__pycache__/user.cpython-38.pyc
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# AWS SAM build artifacts
+.aws-sam/
+
+# Node / Angular (clients have their own .gitignore too)
+node_modules/
+dist/
+.angular/
+
+# OS / editor
+.DS_Store
+Thumbs.db
