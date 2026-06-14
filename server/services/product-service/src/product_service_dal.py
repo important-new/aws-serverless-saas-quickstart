@@ -8,7 +8,7 @@ import uuid
 import json
 import logger
 import metrics_manager
-from datetime import datetime
+from datetime import datetime, timezone
 
 from product_models import Product
 from boto3.dynamodb.conditions import Key, Attr
@@ -143,9 +143,9 @@ def update_product(event, payload, key):
                 ':productName': payload['name'],
                 ':price': payload['price'],
                 ':category': payload['category'],
-                ':updated_at': datetime.datetime.now(datetime.UTC).isoformat()
+                ':updated_at': datetime.now(timezone.utc).isoformat()
             },
-            ReturnValues="UPDATED_NEW",
+            ReturnValues="ALL_NEW",
             ReturnConsumedCapacity='TOTAL'
         )
         

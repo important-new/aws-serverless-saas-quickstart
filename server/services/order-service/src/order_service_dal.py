@@ -9,7 +9,7 @@ from order_models import Order
 import json
 import utils
 import logger
-from datetime import datetime
+from datetime import datetime, timezone
 from boto3.dynamodb.conditions import Key
 import metrics_manager
 
@@ -135,9 +135,9 @@ def update_order(event, payload, key):
             ExpressionAttributeValues={
                 ':orderName': payload['orderName'],
                 ':orderProducts': get_order_products_dict(payload['orderProducts']),
-                ':updated_at': datetime.now(datetime.UTC).isoformat()
+                ':updated_at': datetime.now(timezone.utc).isoformat()
             },
-            ReturnValues="UPDATED_NEW",
+            ReturnValues="ALL_NEW",
             ReturnConsumedCapacity='TOTAL'
         )
         
