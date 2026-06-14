@@ -3,16 +3,13 @@ name: backend-tests
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - "server/**"
       - "requirements-test.txt"
       - "pytest.ini"
       - ".github/workflows/backend-tests.yml"
   pull_request:
-    paths:
-      - "server/**"
-      - "requirements-test.txt"
-      - "pytest.ini"
 
 jobs:
   pytest:
