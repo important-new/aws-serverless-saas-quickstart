@@ -219,7 +219,7 @@ def get_order_products_dict(order_products):
     """
     order_product_list = []
     for product in order_products:
-        order_product_list.append(vars(product))
+        order_product_list.append(product if isinstance(product, dict) else vars(product))
     return order_product_list    
 
   
