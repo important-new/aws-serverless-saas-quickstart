@@ -1,48 +1,56 @@
-# 配置指南（前端环境与 Cognito）
+# Configuration Guide (Frontend Environment & Cognito)
 
-本仓库**不包含任何真实部署的标识符**。以下文件中的值均为**占位符**，
-需替换为你自己部署的值后再构建/运行。
+[**English**](CONFIGURATION.md) ｜ [中文](zh-CN/CONFIGURATION.md)
 
-> 说明：Cognito User Pool ID、App Client ID、API Gateway URL、CloudFront
-> Distribution ID 都会被打包进浏览器或脚本，**并非机密**；占位化的目的是
-> 不让本公开仓库绑定到任何特定的 AWS 部署。
+[← Back to README](../README.md)
 
-## 需要填写的占位符
+This repository **does not contain any real deployment identifiers**. The values in
+the files below are all **placeholders** and must be replaced with your own
+deployment's values before building/running.
 
-| 占位符 | 含义 | 出现位置 |
+> Note: The Cognito User Pool ID, App Client ID, API Gateway URL, and CloudFront
+> Distribution ID all get bundled into the browser or into scripts, so they are
+> **not secrets**; the purpose of using placeholders is simply to avoid binding
+> this public repository to any specific AWS deployment.
+
+## Placeholders to fill in
+
+| Placeholder | Meaning | Where it appears |
 |---|---|---|
-| `us-east-1_XXXXXXXXX` | Cognito User Pool ID | `client/Admin/src/aws-exports.ts`、`client/Admin/script/auth-config.js` |
-| `XXXXXXXXXXXXXXXXXXXXXXXXXX` | Cognito App Client ID | 同上 |
-| `YOUR_API_ID` | 共享 API Gateway 的 REST API ID | 各 app `src/environments/environment*.ts` |
-| `YOUR_CLOUDFRONT_DISTRIBUTION_ID` | 各站点的 CloudFront 分发 ID | 各 app `package.json` 的 `reset` 脚本 |
+| `us-east-1_XXXXXXXXX` | Cognito User Pool ID | `client/Admin/src/aws-exports.ts`, `client/Admin/script/auth-config.js` |
+| `XXXXXXXXXXXXXXXXXXXXXXXXXX` | Cognito App Client ID | Same as above |
+| `YOUR_API_ID` | REST API ID of the shared API Gateway | `src/environments/environment*.ts` in each app |
+| `YOUR_CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution ID for each site | The `reset` script in each app's `package.json` |
 
-## 方式一：脚本生成（推荐，针对 environment.ts）
+## Option 1: Generate with a script (recommended, for environment.ts)
 
-仓库已提供 `scripts/generate-env-config.js`，会用 AWS CLI 查询共享 API 并
-生成对应 app 的 `environment.ts`：
+The repository already provides `scripts/generate-env-config.js`, which uses the
+AWS CLI to query the shared API and generate the `environment.ts` for the
+corresponding app:
 
 ```bash
-# 需先配置好 AWS CLI 凭证与区域
+# AWS CLI credentials and region must be configured first
 node scripts/generate-env-config.js Admin prod
 node scripts/generate-env-config.js Application prod
 node scripts/generate-env-config.js Landing prod
 ```
 
-## 方式二：手动填写
+## Option 2: Fill in manually
 
-1. **Cognito**（`client/Admin/src/aws-exports.ts`）：把 `us-east-1_XXXXXXXXX`、
-   `XXXXXXXXXXXXXXXXXXXXXXXXXX` 替换为你的 User Pool ID 与 App Client ID。
-2. **API URL**（`client/*/src/environments/environment*.ts`）：把 `YOUR_API_ID`
-   替换为共享 API Gateway 的 REST API ID。
-3. **CloudFront**（`client/*/package.json` 的 `reset` 脚本）：把
-   `YOUR_CLOUDFRONT_DISTRIBUTION_ID` 替换为各站点分发 ID。
+1. **Cognito** (`client/Admin/src/aws-exports.ts`): replace `us-east-1_XXXXXXXXX`
+   and `XXXXXXXXXXXXXXXXXXXXXXXXXX` with your User Pool ID and App Client ID.
+2. **API URL** (`client/*/src/environments/environment*.ts`): replace `YOUR_API_ID`
+   with the REST API ID of the shared API Gateway.
+3. **CloudFront** (the `reset` script in `client/*/package.json`): replace
+   `YOUR_CLOUDFRONT_DISTRIBUTION_ID` with each site's distribution ID.
 
-## ⚠️ 避免再次提交真实值
+## ⚠️ Avoid committing real values again
 
-填入真实值后，**不要把它们提交回仓库**。建议本地用下列方式之一隔离：
+After filling in real values, **do not commit them back to the repository**. We
+recommend isolating them locally using one of the following approaches:
 
 ```bash
-# 让 git 忽略对这些文件的本地改动（不影响他人）
+# Have git ignore your local changes to these files (without affecting others)
 git update-index --skip-worktree \
   client/Admin/src/aws-exports.ts \
   client/Admin/src/environments/environment.ts \
@@ -53,4 +61,4 @@ git update-index --skip-worktree \
   client/Landing/src/environments/environment.prod.ts
 ```
 
-（撤销：`git update-index --no-skip-worktree <file>`）
+(To undo: `git update-index --no-skip-worktree <file>`)

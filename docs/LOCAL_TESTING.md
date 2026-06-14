@@ -1,91 +1,114 @@
-# 免费本地后端测试（无需 AWS 账号）
+# Free Local Backend Testing (No AWS Account Required)
 
-在本地真实跑后端服务，验证 Lambda handler + DAL + DynamoDB 读写——零成本、
-不碰真实 AWS。提供两种方式。
+[**English**](LOCAL_TESTING.md) ｜ [中文](zh-CN/LOCAL_TESTING.md)
 
-> 注意：两种方式都**不含 Cognito**。真实登录依赖 Cognito（无免费本地方案，见
-> `docs/MIGRATION_VERIFICATION.md`）。均通过 `requestContext.authorizer`
-> 注入假的鉴权上下文（`tenantId`/`userRole`）来绕过 authorizer。
+[← Back to README](../README.md)
 
-## 方式一（推荐，跨平台）：pytest + moto
+Run the backend services for real, locally, to verify the Lambda handler + DAL +
+DynamoDB reads/writes — at zero cost, without touching real AWS. Two approaches
+are provided.
 
-纯 Python，**Windows/macOS/Linux 通用，无需 Docker、无需 AWS**。`moto` 在内存里
-模拟 DynamoDB。两条命令：
+> Note: neither approach includes **Cognito**. Real login depends on Cognito
+> (there is no free local alternative — see `docs/MIGRATION_VERIFICATION.md`).
+> Both bypass the authorizer by injecting a fake auth context
+> (`tenantId`/`userRole`) through `requestContext.authorizer`.
+
+## Approach 1 (Recommended, Cross-Platform): pytest + moto
+
+Pure Python, **works on Windows/macOS/Linux, no Docker and no AWS required**.
+`moto` simulates DynamoDB in memory. Two commands:
 
 ```bash
 pip install -r requirements-test.txt
 pytest
 ```
 
-- 测试位于 `server/services/*/tests/test_*.py`：直接 import handler、用 moto mock
-  DynamoDB、断言 CRUD（含 update 回归测试，锁住已修复的 3 个 bug）。
-- 共享设置见 `server/conftest.py`（把共享层与各服务 `src/` 加进 `sys.path`，并在
-  import 前设好环境变量）。
-- CI：`.github/workflows/backend-tests.yml` 在 ubuntu/windows/macOS 三平台跑 `pytest`。
+- Tests live in `server/services/*/tests/test_*.py`: they import the handler
+  directly, mock DynamoDB with moto, and assert CRUD (including update
+  regression tests that lock in the 3 fixed bugs).
+- Shared setup is in `server/conftest.py` (adds the shared layer and each
+  service's `src/` to `sys.path`, and sets environment variables before import).
+- CI: `.github/workflows/backend-tests.yml` runs `pytest` on all three
+  platforms — ubuntu/windows/macOS.
 
-写测试套件、跑 CI 首选此方式。下面的 DynamoDB Local 更保真但更重、依赖 Docker 与
-Git Bash（非跨平台），适合偶尔高保真验证。
+This is the preferred approach for writing test suites and running CI. The
+DynamoDB Local approach below is higher fidelity but heavier, depends on Docker
+and Git Bash (not cross-platform), and suits occasional high-fidelity
+verification.
 
-## 方式二（高保真）：DynamoDB Local + sam local invoke
+## Approach 2 (High Fidelity): DynamoDB Local + sam local invoke
 
-### 前置
-- Docker 运行中
-- SAM CLI（`pip install aws-sam-cli`）
-- 本地 Python + boto3（`pip install boto3`）
+### Prerequisites
+- Docker running
+- SAM CLI (`pip install aws-sam-cli`)
+- Local Python + boto3 (`pip install boto3`)
 
-## 一键运行（product-service 全 CRUD）
+## One-Command Run (product-service full CRUD)
 ```bash
 bash scripts/local-test-product.sh
 ```
-脚本会：起 DynamoDB Local（`-sharedDb`）→ 建 `Product-pooled` 表 → 构建 →
-依次 invoke create/get/update/list/delete，最后自动还原临时改动。
-停止本地库：`docker rm -f ddb-local`。
+The script will: start DynamoDB Local (`-sharedDb`) → create the `Product-pooled`
+table → build → invoke create/get/update/list/delete in sequence, and finally
+automatically revert the temporary changes.
+Stop the local database: `docker rm -f ddb-local`.
 
-## 关键坑（手动操作时务必注意）
+## Key Pitfalls (Be Careful When Doing This Manually)
 
-1. **DynamoDB Local 要加 `-sharedDb`**：否则按"凭证+区域"隔离数据库文件，
-   建表方和函数看到的不是同一个库。
+1. **DynamoDB Local needs `-sharedDb`**: otherwise it isolates the database file
+   by "credentials + region", so the table creator and the function don't see
+   the same database.
    ```bash
    docker run -d --network saas-local --name ddb-local -p 8000:8000 \
      amazon/dynamodb-local -jar DynamoDBLocal.jar -inMemory -sharedDb -port 8000
    ```
 
-2. **`sam local invoke --env-vars` 只能覆盖模板里已声明的环境变量**。
-   `AWS_ENDPOINT_URL_DYNAMODB`（让函数 boto3 指向本地库）若不在模板里，
-   不会被注入。所以需临时把它加进 `template.yaml` 的 `Globals.Function.Environment`：
+2. **`sam local invoke --env-vars` can only override environment variables
+   already declared in the template**. `AWS_ENDPOINT_URL_DYNAMODB` (which points
+   the function's boto3 at the local database) won't be injected if it's not in
+   the template. So you need to temporarily add it to
+   `Globals.Function.Environment` in `template.yaml`:
    ```yaml
    AWS_ENDPOINT_URL_DYNAMODB: "http://ddb-local:8000"
    ```
-   （脚本会自动加、用完 `git checkout` 还原。）
+   (The script adds it automatically and reverts with `git checkout` when done.)
 
-3. **函数容器要接入同一 Docker 网络**：`sam local invoke ... --docker-network saas-local`，
-   这样函数里用主机名 `ddb-local` 能解析到 DynamoDB Local 容器。
+3. **The function container must join the same Docker network**:
+   `sam local invoke ... --docker-network saas-local`, so that the hostname
+   `ddb-local` used inside the function resolves to the DynamoDB Local container.
 
-4. **关掉 X-Ray**：env 里设 `POWERTOOLS_TRACE_DISABLED=true`，避免本地无 X-Ray daemon 报噪。
+4. **Turn off X-Ray**: set `POWERTOOLS_TRACE_DISABLED=true` in the env, to avoid
+   noisy errors from the missing local X-Ray daemon.
 
-## 已验证结果（2026-06-14）
+## Verified Results (2026-06-14)
 
-product-service 五个操作全部 `statusCode 200`：create / get / get_products /
-update / delete。本地测试还**发现并修复了 update 的两个预先存在 bug**
-（`datetime` 误用、`ReturnValues=UPDATED_NEW`）——见 commit `b61c780`。
+All five product-service operations returned `statusCode 200`: create / get /
+get_products / update / delete. Local testing also **found and fixed two
+pre-existing bugs in update** (misuse of `datetime`,
+`ReturnValues=UPDATED_NEW`) — see commit `b61c780`.
 
-order-service 为相同代码模式，已应用相同修复（可仿照本脚本建 `Order-pooled` 表后同样验证）。
+order-service follows the same code pattern and has had the same fixes applied
+(you can verify it the same way by creating an `Order-pooled` table following
+this script).
 
 ---
 
-## 前端：Playwright 运行时冒烟（跨平台）
+## Frontend: Playwright Runtime Smoke Test (Cross-Platform)
 
-`e2e/` 是独立的 Playwright 项目，**Windows/macOS/Linux 通用**。它 serve 三个 app
-的构建产物，用无头 Chromium 加载，断言：Angular 20 正常 bootstrap、应用外壳与关键
-元素渲染（Admin 验证 `<amplify-authenticator>` 出现）、无致命 JS 错误。
+`e2e/` is a standalone Playwright project that **works on
+Windows/macOS/Linux**. It serves the build artifacts of all three apps, loads
+them with headless Chromium, and asserts: Angular 20 bootstraps correctly, the
+app shell and key elements render (Admin verifies that
+`<amplify-authenticator>` appears), and there are no fatal JS errors.
 
 ```bash
-# 先构建三个 app（各自目录）：npx ng build --configuration production
+# First build the three apps (each in its own directory): npx ng build --configuration production
 cd e2e
 npm install
-npx playwright install chromium      # 大陆可加速：PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright
+npx playwright install chromium      # Speed up in mainland China: PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright
 npx playwright test
 ```
 
-- 不测真实登录（无免费本地 Cognito）；针对占位配置的预期网络/鉴权错误已忽略。
-- CI：`.github/workflows/frontend-e2e.yml` 构建三个 app 后跑 Playwright。
+- Does not test real login (no free local Cognito); expected network/auth
+  errors against the placeholder config are ignored.
+- CI: `.github/workflows/frontend-e2e.yml` builds the three apps and then runs
+  Playwright.

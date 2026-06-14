@@ -10,7 +10,7 @@
 
 本项目派生自 AWS 官方的 [AWS Serverless SaaS Workshop](https://github.com/aws-samples/aws-serverless-saas-workshop)（基于其 `Lab6`），并在其基础上做了**后端架构重构、数据模型简化、运行时与依赖升级、部署脚本增强**等大量修改，已作为独立衍生项目按 MIT-0 演进。
 
-- 完整的差异清单与原因：[`docs/CHANGES_FROM_WORKSHOP.md`](docs/CHANGES_FROM_WORKSHOP.md)
+- 完整的差异清单与原因：[`docs/zh-CN/CHANGES_FROM_WORKSHOP.md`](docs/zh-CN/CHANGES_FROM_WORKSHOP.md)
 - 版权溯源与署名：[`NOTICE`](NOTICE) ｜ 许可证：[`LICENSE`](LICENSE)（MIT-0）
 
 ## 核心特性
@@ -165,7 +165,7 @@ aws-serverless-saas-quickstart/
 - [`docs/zh-CN/TENANT_MANAGEMENT.md`](docs/zh-CN/TENANT_MANAGEMENT.md) —— 平台租户管理实现(生命周期、用户/租户关联、权限控制、分级)
 - [`docs/zh-CN/API_CONFIGURATION.md`](docs/zh-CN/API_CONFIGURATION.md) —— 管理端与租户端接口配置关系剖析
 - [`docs/zh-CN/THROTTLING_AND_MONITORING.md`](docs/zh-CN/THROTTLING_AND_MONITORING.md) —— 监控运维、使用计划限流,以及 CloudWatch 限流指标机制
-- [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) ｜ [`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md) ｜ [`docs/CHANGES_FROM_WORKSHOP.md`](docs/CHANGES_FROM_WORKSHOP.md) ｜ [`docs/DEPENDENCY_AUDIT.md`](docs/DEPENDENCY_AUDIT.md)
+- [`docs/zh-CN/CONFIGURATION.md`](docs/zh-CN/CONFIGURATION.md) ｜ [`docs/zh-CN/LOCAL_TESTING.md`](docs/zh-CN/LOCAL_TESTING.md) ｜ [`docs/zh-CN/CHANGES_FROM_WORKSHOP.md`](docs/zh-CN/CHANGES_FROM_WORKSHOP.md) ｜ [`docs/zh-CN/DEPENDENCY_AUDIT.md`](docs/zh-CN/DEPENDENCY_AUDIT.md)
 
 深度剖析的英文版位于 [`docs/`](docs/) 根目录。
 
@@ -303,7 +303,7 @@ ng serve
 
 ### 测试
 
-跨平台测试套件（Windows / macOS / Linux），详见 [`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md)：
+跨平台测试套件（Windows / macOS / Linux），详见 [`docs/zh-CN/LOCAL_TESTING.md`](docs/zh-CN/LOCAL_TESTING.md)：
 
 ```bash
 # 后端：pytest + moto（内存模拟 DynamoDB，无需 Docker / AWS）
@@ -349,7 +349,7 @@ CI 见 `.github/workflows/`：`backend-tests.yml`（三平台 pytest）、`front
 ## 许可证
 
 本项目基于 [MIT-0](LICENSE) 许可证开源。上游溯源与署名见 [`NOTICE`](NOTICE)，
-与上游 Workshop 的差异见 [`docs/CHANGES_FROM_WORKSHOP.md`](docs/CHANGES_FROM_WORKSHOP.md)。
+与上游 Workshop 的差异见 [`docs/zh-CN/CHANGES_FROM_WORKSHOP.md`](docs/zh-CN/CHANGES_FROM_WORKSHOP.md)。
 
 ## 相关资源
 
