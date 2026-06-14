@@ -1,0 +1,277 @@
+openapi: 3.0.3
+info:
+  title: AWS Serverless SaaS Admin API
+  description: AWS Serverless SaaS Quickstart 管理后台API接口文档
+  version: 1.0.0
+  contact:
+    name: AWS Serverless SaaS Team
+    email: support@example.com
+  license:
+    name: MIT-0
+    url: https://opensource.org/licenses/MIT-0
+
+servers:
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com/{stage}
+    description: AWS API Gateway endpoint
+    variables:
+      apiId:
+        description: API Gateway ID
+        default: your-api-id
+      region:
+        description: AWS Region
+        default: us-east-1
+      stage:
+        description: API Stage
+        default: prod
+
+security:
+  - api_key: []
+  - Authorizer: []
+  - sigv4Reference: []
+
+paths:
+  /registration:
+    post:
+      tags:
+        - Tenant Registration
+      summary: 注册新租户
+      description: 注册一个新的租户账户
+      operationId: registerTenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantRegistration'
+      responses:
+        '200':
+          description: 租户注册成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: 请求参数错误
+        '500':
+          description: 服务器内部错误
+      security: []
+
+  /tenants:
+    get:
+      tags:
+        - Tenant Management
+      summary: 获取所有租户
+      description: 获取系统中的所有租户列表
+      operationId: getTenants
+      responses:
+        '200':
+          description: 成功获取租户列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tenant'
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+  /tenant/{tenantid}:
+    get:
+      tags:
+        - Tenant Management
+      summary: 获取租户信息
+      description: 根据租户ID获取租户详细信息
+      operationId: getTenant
+      parameters:
+        - name: tenantid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 租户ID
+      responses:
+        '200':
+          description: 成功获取租户信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        '404':
+          description: 租户不存在
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+  /users:
+    get:
+      tags:
+        - User Management
+      summary: 获取租户用户列表
+      description: 获取指定租户下的所有用户列表
+      operationId: getUsers
+      responses:
+        '200':
+          description: 成功获取用户列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+  /user:
+    post:
+      tags:
+        - User Management
+      summary: 创建用户
+      description: 创建新的用户账户
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreation'
+      responses:
+        '200':
+          description: 用户创建成功
+        '400':
+          description: 请求参数错误
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: x-api-key
+      in: header
+      description: API密钥认证
+    Authorizer:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: JWT令牌认证
+      x-amazon-apigateway-authtype: custom
+    sigv4Reference:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: AWS SigV4签名认证
+      x-amazon-apigateway-authtype: awsSigv4
+
+  schemas:
+    TenantRegistration:
+      type: object
+      required:
+        - tenantName
+        - tenantAddress
+        - tenantEmail
+        - tenantPhone
+        - tenantTier
+      properties:
+        tenantName:
+          type: string
+          description: 租户名称
+        tenantAddress:
+          type: string
+          description: 租户地址
+        tenantEmail:
+          type: string
+          format: email
+          description: 租户邮箱
+        tenantPhone:
+          type: string
+          description: 租户电话
+        tenantTier:
+          type: string
+          enum: [BASIC, STANDARD, PREMIUM, PLATINUM]
+          description: 租户服务层级
+
+    Tenant:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          description: 租户唯一标识符
+        tenantName:
+          type: string
+          description: 租户名称
+        tenantEmail:
+          type: string
+          format: email
+          description: 租户邮箱
+        tenantTier:
+          type: string
+          enum: [BASIC, STANDARD, PREMIUM, PLATINUM]
+          description: 租户服务层级
+        isActive:
+          type: boolean
+          description: 租户是否激活
+
+    User:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: 用户邮箱
+        created:
+          type: string
+          format: date-time
+          description: 用户创建时间
+        modified:
+          type: string
+          format: date-time
+          description: 用户最后修改时间
+        enabled:
+          type: boolean
+          description: 用户是否启用
+        status:
+          type: string
+          description: 用户状态
+        verified:
+          type: boolean
+          description: 邮箱是否已验证
+
+    UserCreation:
+      type: object
+      required:
+        - userName
+        - userEmail
+        - tenantId
+      properties:
+        userName:
+          type: string
+          description: 用户名
+        userEmail:
+          type: string
+          format: email
+          description: 用户邮箱
+        tenantId:
+          type: string
+          description: 租户ID
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 成功消息
+
+tags:
+  - name: Tenant Registration
+    description: 租户注册相关接口
+  - name: Tenant Management
+    description: 租户管理相关接口
+  - name: User Management
+    description: 用户管理相关接口

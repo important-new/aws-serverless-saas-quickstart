@@ -8,7 +8,10 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "deploy": "node -e \"const {execSync} = require('child_process'); const bucket = execSync('aws cloudformation describe-stacks --stack-name saas-control-stack --query \\\"Stacks[0].Outputs[?OutputKey==\\'AdminSiteBucket\\'].OutputValue\\\" --output text', {encoding: 'utf8'}).trim(); execSync('aws s3 sync dist/ s3://' + bucket + ' --delete', {stdio: 'inherit'});\"",
-    "reset":"aws cloudfront create-invalidation --distribution-id YOUR_CLOUDFRONT_DISTRIBUTION_ID --paths \"/*\""
+    "reset": "aws cloudfront create-invalidation --distribution-id YOUR_CLOUDFRONT_DISTRIBUTION_ID --paths \"/*\"",
+    "docs:screenshots": "node script/screenshots.js",
+    "docs:generate": "node script/generate-docs.js",
+    "docs:all": "npm run docs:screenshots && npm run docs:generate"
   },
   "private": true,
   "dependencies": {
@@ -44,6 +47,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.0.0",
     "karma-jasmine-html-reporter": "~1.7.0",
+    "puppeteer": "^24.16.0",
     "typescript": "~4.7.2"
   }
 }

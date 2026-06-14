@@ -1,0 +1,943 @@
+openapi: 3.1.0
+info:
+  title: AWS Serverless SaaS Admin API
+  description: |
+    AWS Serverless SaaS Quickstart 管理后台API接口文档
+    
+    该API提供租户管理、用户管理、认证授权等核心功能。
+    支持多租户架构，包含不同服务层级的API密钥管理。
+    
+    ## 认证方式
+    - **API Key**: 通过 `x-api-key` 头部进行API密钥认证
+    - **JWT Token**: 通过 `Authorization: Bearer <token>` 进行JWT认证
+    - **AWS SigV4**: 通过AWS签名进行认证
+    
+    ## 服务层级
+    - **Basic**: 基础服务层级，每日500次调用限制
+    - **Standard**: 标准服务层级，每日3000次调用限制
+    - **Premium**: 高级服务层级，每日5000次调用限制
+    - **Platinum**: 白金服务层级，每日10000次调用限制
+    - **System Admin**: 系统管理员，每日10000次调用限制
+    
+  version: 1.0.0
+  contact:
+    name: AWS Serverless SaaS Team
+    email: support@example.com
+  license:
+    name: MIT-0
+    url: https://opensource.org/licenses/MIT-0
+
+servers:
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com/{stage}
+    description: AWS API Gateway endpoint
+    variables:
+      apiId:
+        description: API Gateway ID
+        default: your-api-id
+      region:
+        description: AWS Region
+        default: us-east-1
+      stage:
+        description: API Stage
+        default: prod
+
+security:
+  - api_key: []
+  - Authorizer: []
+  - sigv4Reference: []
+
+paths:
+  /registration:
+    post:
+      tags:
+        - Tenant Registration
+      summary: 注册新租户
+      description: 注册一个新的租户账户，系统会自动创建用户池和应用客户端
+      operationId: registerTenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantRegistration'
+            example:
+              tenantName: "示例公司"
+              tenantAddress: "北京市朝阳区xxx街道xxx号"
+              tenantEmail: "admin@example.com"
+              tenantPhone: "+86-138-0000-0000"
+              tenantTier: "STANDARD"
+      responses:
+        '200':
+          description: 租户注册成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: 请求参数错误
+        '500':
+          description: 服务器内部错误
+      security: []
+    options:
+      tags:
+        - CORS
+      summary: CORS预检请求
+      responses:
+        '200':
+          description: CORS预检成功
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+
+  /provisioning:
+    post:
+      tags:
+        - Tenant Provisioning
+      summary: 租户资源预配
+      description: 为新租户预配必要的AWS资源
+      operationId: provisionTenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantProvisioning'
+      responses:
+        '200':
+          description: 资源预配成功
+        '400':
+          description: 请求参数错误
+        '500':
+          description: 服务器内部错误
+      security:
+        - sigv4Reference: []
+
+  /provisioning/{tenantid}:
+    put:
+      tags:
+        - Tenant Provisioning
+      summary: 租户资源取消预配
+      description: 取消指定租户的AWS资源预配
+      operationId: deprovisionTenant
+      parameters:
+        - name: tenantid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 租户ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantDeprovisioning'
+      responses:
+        '200':
+          description: 资源取消预配成功
+        '404':
+          description: 租户不存在
+        '500':
+          description: 服务器内部错误
+      security:
+        - sigv4Reference: []
+
+  /tenant/activation/{tenantid}:
+    put:
+      tags:
+        - Tenant Management
+      summary: 激活租户
+      description: 激活指定的租户账户
+      operationId: activateTenant
+      parameters:
+        - name: tenantid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 租户ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantActivation'
+      responses:
+        '200':
+          description: 租户激活成功
+        '404':
+          description: 租户不存在
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+  /tenants:
+    get:
+      tags:
+        - Tenant Management
+      summary: 获取所有租户
+      description: 获取系统中的所有租户列表
+      operationId: getTenants
+      responses:
+        '200':
+          description: 成功获取租户列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tenant'
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+  /tenant:
+    post:
+      tags:
+        - Tenant Management
+      summary: 创建租户
+      description: 创建新的租户记录
+      operationId: createTenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantCreation'
+      responses:
+        '200':
+          description: 租户创建成功
+        '400':
+          description: 请求参数错误
+        '500':
+          description: 服务器内部错误
+      security:
+        - sigv4Reference: []
+
+  /tenant/init/{tenantname}:
+    get:
+      tags:
+        - Tenant Management
+      summary: 获取租户配置
+      description: 根据租户名称获取租户配置信息
+      operationId: getTenantConfig
+      parameters:
+        - name: tenantname
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 租户名称
+      responses:
+        '200':
+          description: 成功获取租户配置
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantConfig'
+        '404':
+          description: 租户不存在
+        '500':
+          description: 服务器内部错误
+
+  /tenant/{tenantid}:
+    get:
+      tags:
+        - Tenant Management
+      summary: 获取租户信息
+      description: 根据租户ID获取租户详细信息
+      operationId: getTenant
+      parameters:
+        - name: tenantid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 租户ID
+      responses:
+        '200':
+          description: 成功获取租户信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        '404':
+          description: 租户不存在
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+    put:
+      tags:
+        - Tenant Management
+      summary: 更新租户信息
+      description: 更新指定租户的信息
+      operationId: updateTenant
+      parameters:
+        - name: tenantid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 租户ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantUpdate'
+      responses:
+        '200':
+          description: 租户信息更新成功
+        '400':
+          description: 请求参数错误
+        '404':
+          description: 租户不存在
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+    delete:
+      tags:
+        - Tenant Management
+      summary: 停用租户
+      description: 停用指定的租户账户
+      operationId: deactivateTenant
+      parameters:
+        - name: tenantid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 租户ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantDeactivation'
+      responses:
+        '200':
+          description: 租户停用成功
+        '404':
+          description: 租户不存在
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+  /user/{username}:
+    get:
+      tags:
+        - User Management
+      summary: 获取用户信息
+      description: 根据用户名获取用户详细信息
+      operationId: getUser
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 用户名
+      responses:
+        '200':
+          description: 成功获取用户信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: 用户不存在
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+    put:
+      tags:
+        - User Management
+      summary: 更新用户信息
+      description: 更新指定用户的信息
+      operationId: updateUser
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 用户名
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: 用户信息更新成功
+        '400':
+          description: 请求参数错误
+        '404':
+          description: 用户不存在
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+    delete:
+      tags:
+        - User Management
+      summary: 停用用户
+      description: 停用指定的用户账户
+      operationId: disableUser
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 用户名
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserDisable'
+      responses:
+        '200':
+          description: 用户停用成功
+        '404':
+          description: 用户不存在
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+  /user/tenant-admin:
+    post:
+      tags:
+        - User Management
+      summary: 创建租户管理员
+      description: 创建新的租户管理员用户
+      operationId: createTenantAdmin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantAdminCreation'
+      responses:
+        '200':
+          description: 租户管理员创建成功
+        '400':
+          description: 请求参数错误
+        '500':
+          description: 服务器内部错误
+      security:
+        - sigv4Reference: []
+
+  /user:
+    post:
+      tags:
+        - User Management
+      summary: 创建用户
+      description: 创建新的用户账户
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreation'
+      responses:
+        '200':
+          description: 用户创建成功
+        '400':
+          description: 请求参数错误
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+  /users:
+    get:
+      tags:
+        - User Management
+      summary: 获取租户用户列表
+      description: 获取指定租户下的所有用户列表
+      operationId: getUsers
+      responses:
+        '200':
+          description: 成功获取用户列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '403':
+          description: 权限不足
+        '500':
+          description: 服务器内部错误
+
+  /users/disable:
+    put:
+      tags:
+        - User Management
+      summary: 批量停用租户用户
+      description: 停用指定租户下的所有用户
+      operationId: disableUsersByTenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsersDisableByTenant'
+      responses:
+        '200':
+          description: 用户批量停用成功
+        '400':
+          description: 请求参数错误
+        '500':
+          description: 服务器内部错误
+      security:
+        - sigv4Reference: []
+
+  /users/enable:
+    put:
+      tags:
+        - User Management
+      summary: 批量启用租户用户
+      description: 启用指定租户下的所有用户
+      operationId: enableUsersByTenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsersEnableByTenant'
+      responses:
+        '200':
+          description: 用户批量启用成功
+        '400':
+          description: 请求参数错误
+        '500':
+          description: 服务器内部错误
+      security:
+        - sigv4Reference: []
+
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: x-api-key
+      in: header
+      description: API密钥认证，用于不同服务层级的访问控制
+    Authorizer:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: JWT令牌认证，格式为 `Bearer <token>`
+      x-amazon-apigateway-authtype: custom
+    sigv4Reference:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: AWS SigV4签名认证
+      x-amazon-apigateway-authtype: awsSigv4
+
+  schemas:
+    # 租户相关模型
+    TenantRegistration:
+      type: object
+      required:
+        - tenantName
+        - tenantAddress
+        - tenantEmail
+        - tenantPhone
+        - tenantTier
+      properties:
+        tenantName:
+          type: string
+          description: 租户名称
+          example: "示例公司"
+        tenantAddress:
+          type: string
+          description: 租户地址
+          example: "北京市朝阳区xxx街道xxx号"
+        tenantEmail:
+          type: string
+          format: email
+          description: 租户邮箱
+          example: "admin@example.com"
+        tenantPhone:
+          type: string
+          description: 租户电话
+          example: "+86-138-0000-0000"
+        tenantTier:
+          type: string
+          enum: [BASIC, STANDARD, PREMIUM, PLATINUM]
+          description: 租户服务层级
+          example: "STANDARD"
+
+    Tenant:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          description: 租户唯一标识符
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        tenantName:
+          type: string
+          description: 租户名称
+          example: "示例公司"
+        tenantAddress:
+          type: string
+          description: 租户地址
+          example: "北京市朝阳区xxx街道xxx号"
+        tenantEmail:
+          type: string
+          format: email
+          description: 租户邮箱
+          example: "admin@example.com"
+        tenantPhone:
+          type: string
+          description: 租户电话
+          example: "+86-138-0000-0000"
+        tenantTier:
+          type: string
+          enum: [BASIC, STANDARD, PREMIUM, PLATINUM]
+          description: 租户服务层级
+          example: "STANDARD"
+        isActive:
+          type: boolean
+          description: 租户是否激活
+          example: true
+        dedicatedTenancy:
+          type: string
+          description: 是否为专用租户
+          example: "false"
+        apiKey:
+          type: string
+          description: 租户API密钥
+          example: "daae9784-6d96-11eb-a28b-38f9d33cfd0f"
+        userPoolId:
+          type: string
+          description: Cognito用户池ID
+          example: "us-east-1_xxxxxxxxx"
+        appClientId:
+          type: string
+          description: Cognito应用客户端ID
+          example: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+        apiGatewayUrl:
+          type: string
+          description: API Gateway URL
+          example: "https://api.example.com"
+
+    TenantCreation:
+      type: object
+      required:
+        - tenantId
+        - tenantName
+        - tenantAddress
+        - tenantEmail
+        - tenantPhone
+        - tenantTier
+        - apiKey
+        - userPoolId
+        - appClientId
+        - dedicatedTenancy
+      properties:
+        tenantId:
+          type: string
+          description: 租户唯一标识符
+        tenantName:
+          type: string
+          description: 租户名称
+        tenantAddress:
+          type: string
+          description: 租户地址
+        tenantEmail:
+          type: string
+          format: email
+          description: 租户邮箱
+        tenantPhone:
+          type: string
+          description: 租户电话
+        tenantTier:
+          type: string
+          enum: [BASIC, STANDARD, PREMIUM, PLATINUM]
+          description: 租户服务层级
+        apiKey:
+          type: string
+          description: 租户API密钥
+        userPoolId:
+          type: string
+          description: Cognito用户池ID
+        appClientId:
+          type: string
+          description: Cognito应用客户端ID
+        dedicatedTenancy:
+          type: string
+          description: 是否为专用租户
+
+    TenantUpdate:
+      type: object
+      properties:
+        tenantName:
+          type: string
+          description: 租户名称
+        tenantAddress:
+          type: string
+          description: 租户地址
+        tenantEmail:
+          type: string
+          format: email
+          description: 租户邮箱
+        tenantPhone:
+          type: string
+          description: 租户电话
+        tenantTier:
+          type: string
+          enum: [BASIC, STANDARD, PREMIUM, PLATINUM]
+          description: 租户服务层级
+
+    TenantActivation:
+      type: object
+      properties:
+        isActive:
+          type: boolean
+          description: 是否激活租户
+          example: true
+
+    TenantDeactivation:
+      type: object
+      properties:
+        isActive:
+          type: boolean
+          description: 是否停用租户
+          example: false
+
+    TenantProvisioning:
+      type: object
+      required:
+        - tenantId
+      properties:
+        tenantId:
+          type: string
+          description: 租户ID
+
+    TenantDeprovisioning:
+      type: object
+      required:
+        - tenantId
+      properties:
+        tenantId:
+          type: string
+          description: 租户ID
+
+    TenantConfig:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          description: 租户ID
+        tenantName:
+          type: string
+          description: 租户名称
+        apiKey:
+          type: string
+          description: 租户API密钥
+        userPoolId:
+          type: string
+          description: Cognito用户池ID
+        appClientId:
+          type: string
+          description: Cognito应用客户端ID
+
+    # 用户相关模型
+    User:
+      type: object
+      properties:
+        username:
+          type: string
+          description: 用户名
+          example: "john.doe"
+        email:
+          type: string
+          format: email
+          description: 用户邮箱
+          example: "john.doe@example.com"
+        status:
+          type: string
+          enum: [CONFIRMED, UNCONFIRMED, ARCHIVED]
+          description: 用户状态
+          example: "CONFIRMED"
+        enabled:
+          type: boolean
+          description: 用户是否启用
+          example: true
+        created:
+          type: string
+          format: date-time
+          description: 用户创建时间
+          example: "2023-01-01T00:00:00Z"
+        modified:
+          type: string
+          format: date-time
+          description: 用户最后修改时间
+          example: "2023-01-01T00:00:00Z"
+        verified:
+          type: boolean
+          description: 邮箱是否已验证
+          example: true
+
+    UserCreation:
+      type: object
+      required:
+        - userName
+        - userEmail
+        - tenantId
+      properties:
+        userName:
+          type: string
+          description: 用户名
+          example: "john.doe"
+        userEmail:
+          type: string
+          format: email
+          description: 用户邮箱
+          example: "john.doe@example.com"
+        tenantId:
+          type: string
+          description: 租户ID
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+    UserUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: 用户邮箱
+        enabled:
+          type: boolean
+          description: 用户是否启用
+
+    UserDisable:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: 是否停用用户
+          example: false
+
+    TenantAdminCreation:
+      type: object
+      required:
+        - tenantId
+        - tenantName
+        - tenantAddress
+        - tenantEmail
+        - tenantPhone
+        - tenantTier
+        - dedicatedTenancy
+      properties:
+        tenantId:
+          type: string
+          description: 租户ID
+        tenantName:
+          type: string
+          description: 租户名称
+        tenantAddress:
+          type: string
+          description: 租户地址
+        tenantEmail:
+          type: string
+          format: email
+          description: 租户邮箱
+        tenantPhone:
+          type: string
+          description: 租户电话
+        tenantTier:
+          type: string
+          enum: [BASIC, STANDARD, PREMIUM, PLATINUM]
+          description: 租户服务层级
+        dedicatedTenancy:
+          type: string
+          description: 是否为专用租户
+
+    UsersDisableByTenant:
+      type: object
+      required:
+        - tenantId
+      properties:
+        tenantId:
+          type: string
+          description: 租户ID
+
+    UsersEnableByTenant:
+      type: object
+      required:
+        - tenantId
+      properties:
+        tenantId:
+          type: string
+          description: 租户ID
+
+    # 通用响应模型
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 成功消息
+          example: "操作成功"
+        data:
+          type: object
+          description: 响应数据
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: 错误消息
+        code:
+          type: string
+          description: 错误代码
+        details:
+          type: object
+          description: 错误详情
+
+    Empty:
+      type: object
+      description: 空响应对象
+
+tags:
+  - name: Tenant Registration
+    description: 租户注册相关接口
+  - name: Tenant Provisioning
+    description: 租户资源预配相关接口
+  - name: Tenant Management
+    description: 租户管理相关接口
+  - name: User Management
+    description: 用户管理相关接口
+  - name: CORS
+    description: 跨域资源共享预检请求
+
+externalDocs:
+  description: AWS Serverless SaaS Quickstart 项目文档
+  url: https://github.com/aws-samples/aws-serverless-saas-quickstart
